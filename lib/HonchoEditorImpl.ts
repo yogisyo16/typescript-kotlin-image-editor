@@ -1380,17 +1380,33 @@ export class HonchoEditorClass implements HonchoEditor {
     await this.applyOpenCV(config);
   }
 
-  setShadow(shadow: number): void {
-    this.currentConfig.Shadow = shadow;
-  }
+  // Set and Apply for config
+  // setShadow(shadow: number): void {
+  //   this.currentConfig.Shadow = shadow;
+  // }
 
-  setTemp(temp: number): void {
-    this.currentConfig.Temp = temp;
-  }
+  // setTemp(temp: number): void {
+  //   this.currentConfig.Temp = temp;
+  // }
 
-  setTint(tint: number): void {
-    this.currentConfig.Tint = tint;
-  }
+  // setTint(tint: number): void {
+  //   this.currentConfig.Tint = tint;
+  // }
+
+  // applyShadow(shadow: number): void {
+  //   this.setShadow(shadow);
+  //   this.applyOpenCV(this.currentConfig);
+  // }
+
+  // applyTemp(temp: number): void {
+  //   this.setTemp(temp);
+  //   this.applyOpenCV(this.currentConfig);
+  // }
+
+  // applyTint(tint: number): void {
+  //   this.setTint(tint);
+  //   this.applyOpenCV(this.currentConfig);
+  // }
 
   async undo(): Promise<void> {
     if (this.currentConfigIndex > 0) {
@@ -1424,21 +1440,6 @@ export class HonchoEditorClass implements HonchoEditor {
     const mat = cv.imread(this.imgElement);
     // this.renderToCanvas(mat);
     mat.delete();
-  }
-
-  applyShadow(shadow: number): void {
-    this.setShadow(shadow);
-    this.applyOpenCV(this.currentConfig);
-  }
-
-  applyTemp(temp: number): void {
-    this.setTemp(temp);
-    this.applyOpenCV(this.currentConfig);
-  }
-
-  applyTint(tint: number): void {
-    this.setTint(tint);
-    this.applyOpenCV(this.currentConfig);
   }
 
   sendConfigServer(): void {

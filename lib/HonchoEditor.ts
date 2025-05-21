@@ -41,6 +41,7 @@ export interface HonchoEditor {
     vibrance: number
   ): Promise<void>;
   
+  // // Config setter
   // setShadow(shadow: number): void;
   // setTemp(temp: number): void;
   // setTint(tint: number): void;
