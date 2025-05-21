@@ -241,9 +241,9 @@ export class HonchoEditorClass implements HonchoEditor {
     return result;
   }
 
-  private async applyMidtonesContrast(imageToProcess: cv.Mat, contrastFactor: number): Promise<cv.Mat> {
+  private async applyMidtonesContrast(originalMat: cv.Mat, contrastFactor: number): Promise<cv.Mat> {
     const labImg = new cv.Mat();
-    cv.cvtColor(imageToProcess, labImg, cv.COLOR_BGR2Lab);
+    cv.cvtColor(originalMat, labImg, cv.COLOR_BGR2Lab);
     labImg.convertTo(labImg, cv.CV_32F);
 
     const labChannels = new cv.MatVector();
@@ -307,8 +307,8 @@ export class HonchoEditorClass implements HonchoEditor {
     return result;
   }
 
-  private async boostRedContrast(imageToProcess: cv.Mat, lum: cv.Mat, oriA: cv.Mat): Promise<cv.Mat> {
-    const floatOriImg = imageToProcess.clone();
+  private async boostRedContrast(originalMat: cv.Mat, lum: cv.Mat, oriA: cv.Mat): Promise<cv.Mat> {
+    const floatOriImg = originalMat.clone();
     floatOriImg.convertTo(floatOriImg, cv.CV_32F);
 
     const oriBgrChannels = new cv.MatVector();
@@ -343,7 +343,7 @@ export class HonchoEditorClass implements HonchoEditor {
     cv.multiply(lNormalize, redMask, combinedMask);
 
     const curLabImg = new cv.Mat();
-    cv.cvtColor(imageToProcess, curLabImg, cv.COLOR_BGR2Lab);
+    cv.cvtColor(originalMat, curLabImg, cv.COLOR_BGR2Lab);
     curLabImg.convertTo(curLabImg, cv.CV_32F);
 
     const labChannels = new cv.MatVector();
