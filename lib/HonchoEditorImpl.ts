@@ -441,6 +441,7 @@ export class HonchoEditorClass implements HonchoEditor {
   async modify_image_contrast(contrastScore: number, inputImage: cv.Mat): Promise<cv.Mat> {
     const imageToProcess = inputImage.clone();
     cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
+    contrastScore = contrastScore / 10;
 
     if (contrastScore >= 0) {
       const lowVal = 4.0;

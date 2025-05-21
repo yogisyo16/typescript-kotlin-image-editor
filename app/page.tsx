@@ -266,9 +266,9 @@ export default function Home() {
                     Contrast: {contrastScore}
                     <input
                       type="range"
-                      min="-10"
-                      max="10"
-                      step="0.1"
+                      min="-100"
+                      max="100"
+                      step="1"
                       value={contrastScore}
                       onChange={(e) => setContrastScore(Number(e.target.value))}
                     />
