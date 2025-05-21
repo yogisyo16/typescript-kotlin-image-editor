@@ -1123,371 +1123,95 @@ export class HonchoEditorClass implements HonchoEditor {
     return adjustedMat;
   }
 
-  private async boostLowChannel(scaleRatio: number, originalMat: cv.Mat): Promise<cv.Mat> {
+  private boostLowChannel(scaleRatio: number, originalMat: cv.Mat): cv.Mat {
     try {
-      const labImage = originalMat.clone();
-      const sourceImg = originalMat.clone();
-      cv.cvtColor(labImage, labImage, cv.COLOR_BGR2Lab);
-  
-      // Split LAB channels
-      const labChannels = new cv.MatVector();
-      cv.split(labImage, labChannels);
-  
-      // Extract the L (lightness) channel
-      const lum = labChannels.get(0).clone();
-      lum.convertTo(lum, cv.CV_32F);
-      const lNorm = new cv.Mat();
-      const scalarMat255 = cv.Mat.ones(lum.rows, lum.cols, cv.CV_32F);
-      scalarMat255.setTo(cv.Scalar.all(255.0));
-      cv.divide(lum, scalarMat255, lNorm);
-      scalarMat255.delete();
-  
-      const lumScalingFactor = await this.sigmoid(lNorm, 12.0, 0.2, 2.0);
-  
-      // Initialize scale matrices
-      const redScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-      const greenScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-      const blueScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-  
-      // Apply scaling based on luminance
-      const scaleRatioMat = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-      scaleRatioMat.setTo(cv.Scalar.all(scaleRatio * 1.3));
-      cv.multiply(lumScalingFactor, scaleRatioMat, redScale);
-      cv.multiply(lumScalingFactor, scaleRatioMat, greenScale);
-      cv.multiply(lumScalingFactor, scaleRatioMat, blueScale);
-      scaleRatioMat.delete();
-  
-      const oneMat = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-      cv.add(redScale, oneMat, redScale);
-      cv.add(greenScale, oneMat, greenScale);
-      cv.add(blueScale, oneMat, blueScale);
-      oneMat.delete();
-  
-      // Split BGR channels
-      const bgrChannels = new cv.MatVector();
-      cv.split(sourceImg, bgrChannels);
-      const b = bgrChannels.get(0).clone();
-      const g = bgrChannels.get(1).clone();
-      const r = bgrChannels.get(2).clone();
-  
-      // Convert to float
-      b.convertTo(b, cv.CV_32F);
-      g.convertTo(g, cv.CV_32F);
-      r.convertTo(r, cv.CV_32F);
-  
-      // Apply scaling
-      cv.multiply(r, redScale, r);
-      cv.multiply(g, greenScale, g);
-      cv.multiply(b, blueScale, b);
-  
-      // Convert back to 8-bit
-      r.convertTo(r, cv.CV_8U);
-      g.convertTo(g, cv.CV_8U);
-      b.convertTo(b, cv.CV_8U);
-  
-      // Merge channels
-      const adjustedImage = new cv.Mat();
-      const mergedChannels = new cv.MatVector();
-      mergedChannels.push_back(b);
-      mergedChannels.push_back(g);
-      mergedChannels.push_back(r);
-      cv.merge(mergedChannels, adjustedImage);
-  
-      // Apply Gaussian blur for smoother transitions
-      cv.GaussianBlur(adjustedImage, adjustedImage, new cv.Size(3, 3), 0);
-  
-      // Cleanup
-      labImage.delete();
-      sourceImg.delete();
-      labChannels.delete();
-      lum.delete();
-      lNorm.delete();
-      lumScalingFactor.delete();
-      redScale.delete();
-      greenScale.delete();
-      blueScale.delete();
-      bgrChannels.delete();
-      b.delete();
-      g.delete();
-      r.delete();
-      mergedChannels.delete();
-  
+      const adjustedImage = originalMat.clone();
+      const highlightFactor = scaleRatio;
+
+      const hsvImage = new cv.Mat();
+      cv.cvtColor(adjustedImage, hsvImage, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsvImage, channels);
+      const hue = channels.get(0);
+      const saturation = channels.get(1);
+      const value = channels.get(2);
+
+      const scaledValue = new cv.Mat();
+      cv.convertScaleAbs(value, scaledValue, 0.6 + highlightFactor * 0.4, 0);
+
+      channels.set(2, scaledValue);
+
+      cv.merge(channels, hsvImage);
+
+      cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+
+      hsvImage.delete();
+      channels.delete();
+      scaledValue.delete();
+
       return adjustedImage;
     } catch (error) {
-      console.error("Error in boostLowChannel:", error);
+      console.error("Highlight boost failed:", error);
       return originalMat;
     }
   }
   
   async modify_image_highlights(highlightsScore: number, inputImage: cv.Mat): Promise<cv.Mat> {
     try {
-      const originalMat = inputImage.clone();
-  
-      // Check input channels to determine format
-      const channels = inputImage.channels();
-      console.log("Input image channels:", channels);
-  
-      // Handle input format dynamically
-      if (channels === 4) {
-        // Input is BGRA, convert to BGR
-        cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
-      } else if (channels === 3) {
-        // Input is likely RGB (common in web contexts), convert to BGR
-        cv.cvtColor(originalMat, originalMat, cv.COLOR_RGB2BGR);
-      } else if (channels === 1) {
-        // Input is grayscale, convert to BGR
-        cv.cvtColor(originalMat, originalMat, cv.COLOR_GRAY2BGR);
-      } else {
-        throw new Error(`Unsupported number of channels: ${channels}`);
+      const src = inputImage.clone();
+      if (!src || src.empty()) {
+        throw new Error("Input image is empty");
       }
-  
-      if (highlightsScore < 0) {
-        // Negative case: Decrease highlights
-        const labImg = new cv.Mat();
-        cv.cvtColor(originalMat, labImg, cv.COLOR_BGR2Lab);
-  
-        // Split LAB channels
-        const labChannels = new cv.MatVector();
-        cv.split(labImg, labChannels);
-  
-        // Extract L channel
-        const lum = labChannels.get(0).clone();
-        lum.convertTo(lum, cv.CV_32F);
-        const lNorm = new cv.Mat();
-        const scalar255 = cv.Mat.ones(lum.rows, lum.cols, cv.CV_32F);
-        scalar255.setTo(cv.Scalar.all(255.0));
-        cv.divide(lum, scalar255, lNorm);
-        scalar255.delete();
-  
-        const adjustedHighlights = highlightsScore / 500; // Reduced sensitivity (was /300)
-        const lumScalingFactor = await this.sigmoid(lNorm, 12.0, 0.2, 3.0);
-  
-        // Initialize scale matrices
-        const redScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-        const greenScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-        const blueScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-  
-        const redAdjustment = cv.Mat.ones(redScale.rows, redScale.cols, cv.CV_32F);
-        const greenAdjustment = cv.Mat.ones(greenScale.rows, greenScale.cols, cv.CV_32F);
-        const blueAdjustment = cv.Mat.ones(blueScale.rows, blueScale.cols, cv.CV_32F);
-  
-        // Apply adjustments
-        redAdjustment.setTo(cv.Scalar.all(adjustedHighlights));
-        greenAdjustment.setTo(cv.Scalar.all(adjustedHighlights));
-        blueAdjustment.setTo(cv.Scalar.all(adjustedHighlights));
-  
-        cv.multiply(redAdjustment, lumScalingFactor, redAdjustment);
-        cv.add(redScale, redAdjustment, redScale);
-        cv.multiply(greenAdjustment, lumScalingFactor, greenAdjustment);
-        cv.add(greenScale, greenAdjustment, greenScale);
-        cv.multiply(blueAdjustment, lumScalingFactor, blueAdjustment);
-        cv.add(blueScale, blueAdjustment, blueScale);
-  
-        // Split and process BGR channels
-        const bgrChannels = new cv.MatVector();
-        const floatMat = originalMat.clone();
-        floatMat.convertTo(floatMat, cv.CV_32F);
-        cv.split(floatMat, bgrChannels);
-  
-        cv.multiply(bgrChannels.get(2), redScale, bgrChannels.get(2)); // R
-        cv.multiply(bgrChannels.get(1), greenScale, bgrChannels.get(1)); // G
-        cv.multiply(bgrChannels.get(0), blueScale, bgrChannels.get(0)); // B
-  
-        // Merge and convert
-        const adjustedBgr = new cv.Mat();
-        cv.merge(bgrChannels, adjustedBgr);
-        adjustedBgr.convertTo(adjustedBgr, cv.CV_8U);
-  
-        // Convert to YUV for highlight adjustment
-        const yuvMat = new cv.Mat();
-        cv.cvtColor(adjustedBgr, yuvMat, cv.COLOR_BGR2YUV);
-  
-        const yuvChannels = new cv.MatVector();
-        cv.split(yuvMat, yuvChannels);
-  
-        const yChannel = yuvChannels.get(0).clone();
-        yChannel.convertTo(yChannel, cv.CV_32F);
-  
-        // Preserve U and V channels for color balance
-        const uChannel = yuvChannels.get(1).clone();
-        const vChannel = yuvChannels.get(2).clone();
-  
-        // Configurable parameters
-        const highlightsTonePercent = 0.5;
-        const highlightsTone = 255 - highlightsTonePercent * 255.0;
-  
-        // Compute highlights map
-        const highlightsMap = new cv.Mat(yChannel.rows, yChannel.cols, cv.CV_32F);
-        const temp255Val = new cv.Mat(yChannel.rows, yChannel.cols, cv.CV_32F, new cv.Scalar(255));
-        cv.subtract(temp255Val, yChannel, temp255Val);
-        const scaleMat = cv.Mat.ones(yChannel.rows, yChannel.cols, cv.CV_32F);
-        scaleMat.setTo(cv.Scalar.all(255.0 / (255 - highlightsTone)));
-        cv.multiply(temp255Val, scaleMat, highlightsMap);
-        scaleMat.delete();
-  
-        const temp255ValV2 = new cv.Mat(yChannel.rows, yChannel.cols, cv.CV_32F, new cv.Scalar(255));
-        cv.subtract(temp255ValV2, highlightsMap, highlightsMap);
-  
-        const mask = new cv.Mat();
-        const toneMat = cv.Mat.ones(yChannel.rows, yChannel.cols, cv.CV_32F);
-        toneMat.setTo(cv.Scalar.all(highlightsTone));
-        cv.compare(yChannel, toneMat, mask, cv.CMP_LE);
-        toneMat.delete();
-        highlightsMap.setTo(new cv.Scalar(0), mask);
-  
-        if (adjustedHighlights !== 0) {
-          cv.blur(highlightsMap, highlightsMap, new cv.Size(5, 5)); // Reduced blur size (was 15,15)
-        }
-        const scalarMat255 = cv.Mat.ones(highlightsMap.rows, highlightsMap.cols, cv.CV_32F);
-        scalarMat255.setTo(cv.Scalar.all(255.0));
-        cv.divide(highlightsMap, scalarMat255, highlightsMap);
-        scalarMat255.delete();
-  
-        // Create LUT for highlight adjustment
-        const highlightWeight = 0.4;
-        const highlightGain = 1 + highlightWeight * 1.5; // Reduced gain (was *3.0)
-        const LUT_highlight = new cv.Mat(256, 1, cv.CV_8U);
-        const lutData = new Uint8Array(256);
-        for (let i = 0; i < 256; i++) {
-          const value = Math.min(255, Math.max(0, Math.pow(i / 255.0, highlightGain) * 255)); // Reduced multiplier (was 350)
-          lutData[i] = value;
-        }
-        LUT_highlight.data.set(lutData);
-  
-        // Apply LUT
-        const oneMat = cv.Mat.ones(highlightsMap.rows, highlightsMap.cols, cv.CV_32F);
-        cv.subtract(oneMat, highlightsMap, oneMat);
-        cv.multiply(oneMat, yChannel, oneMat);
-  
-        const lookup = new cv.Mat();
-        const tempY = yChannel.clone();
-        tempY.convertTo(tempY, cv.CV_8U);
-        cv.LUT(tempY, LUT_highlight, lookup);
-  
-        lookup.convertTo(lookup, cv.CV_32F);
-        cv.multiply(lookup, highlightsMap, lookup);
-  
-        const resultY = new cv.Mat();
-        cv.add(oneMat, lookup, resultY);
-  
-        // Sigmoid-based scaling for Y channel
-        resultY.convertTo(resultY, cv.CV_8U);
-        const normalizedY = resultY.clone();
-        normalizedY.convertTo(normalizedY, cv.CV_32F);
-        const updatedYScalingFactor = await this.sigmoid(normalizedY, 9.0, 0.7, 2.0);
-        const adjustedHighlightsMat = cv.Mat.ones(normalizedY.rows, normalizedY.cols, cv.CV_32F);
-        adjustedHighlightsMat.setTo(cv.Scalar.all(adjustedHighlights));
-        cv.multiply(updatedYScalingFactor, adjustedHighlightsMat, updatedYScalingFactor);
-        adjustedHighlightsMat.delete();
-  
-        const yuvScale = cv.Mat.ones(resultY.rows, resultY.cols, cv.CV_32F);
-        cv.add(yuvScale, updatedYScalingFactor, yuvScale);
-  
-        resultY.convertTo(resultY, cv.CV_32F);
-        cv.multiply(resultY, yuvScale, resultY);
-        resultY.convertTo(resultY, cv.CV_8U);
-  
-        // Merge YUV channels with preserved U and V
-        yuvChannels.set(0, resultY);
-        yuvChannels.set(1, uChannel); // Ensure U is unchanged
-        yuvChannels.set(2, vChannel); // Ensure V is unchanged
-        const finalYuv = new cv.Mat();
-        cv.merge(yuvChannels, finalYuv);
-        finalYuv.convertTo(finalYuv, cv.CV_8U);
-  
-        // Convert back to BGR
-        const result = new cv.Mat();
-        cv.cvtColor(finalYuv, result, cv.COLOR_YUV2BGR);
-        cv.cvtColor(result, result, cv.COLOR_BGR2RGB);
-  
-        // Cleanup
-        originalMat.delete();
-        labImg.delete();
-        labChannels.delete();
-        lum.delete();
-        lNorm.delete();
-        lumScalingFactor.delete();
-        redScale.delete();
-        greenScale.delete();
-        blueScale.delete();
-        redAdjustment.delete();
-        greenAdjustment.delete();
-        blueAdjustment.delete();
-        floatMat.delete();
-        bgrChannels.delete();
-        adjustedBgr.delete();
-        yuvMat.delete();
-        yuvChannels.delete();
-        yChannel.delete();
-        uChannel.delete();
-        vChannel.delete();
-        temp255Val.delete();
-        temp255ValV2.delete();
-        mask.delete();
-        highlightsMap.delete();
-        LUT_highlight.delete();
-        oneMat.delete();
-        lookup.delete();
-        tempY.delete();
-        resultY.delete();
-        normalizedY.delete();
-        updatedYScalingFactor.delete();
-        yuvScale.delete();
-        finalYuv.delete();
-  
-        return result;
+
+      const originalImage = new cv.Mat();
+      cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
+
+      const highlightFactor = highlightsScore / 100;
+
+      const hsvImage = new cv.Mat();
+      cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsvImage, channels);
+      const hue = channels.get(0);
+      const saturation = channels.get(1);
+      const value = channels.get(2);
+
+      const scaledValue = new cv.Mat();
+      if (highlightFactor >= 0) {
+        cv.convertScaleAbs(value, scaledValue, 1 + highlightFactor * 0.7, 0);
       } else {
-        // Positive case: Increase highlights
-        const hsvMat = new cv.Mat();
-        cv.cvtColor(originalMat, hsvMat, cv.COLOR_BGR2HSV);
-  
-        const hsvChannels = new cv.MatVector();
-        cv.split(hsvMat, hsvChannels);
-  
-        const value = hsvChannels.get(2).clone();
-        const scaledValue = new cv.Mat();
-        cv.convertScaleAbs(value, scaledValue, 1 + (highlightsScore / 120) * 0.5); // Reduced sensitivity (was /80, 0.7)
-  
-        // Apply boostLowChannel if needed
-        let resultMat = originalMat.clone();
-        if (highlightsScore !== 0) {
-          const boostedImage = await this.boostLowChannel(highlightsScore / 100.0, originalMat); // Reduced sensitivity (was /65.0)
-          resultMat.delete();
-          resultMat = boostedImage;
-        }
-  
-        // Preserve HSV channels
-        const adjustedHSV = new cv.Mat();
-        cv.cvtColor(resultMat, adjustedHSV, cv.COLOR_BGR2HSV);
-        const adjustedHSVChannels = new cv.MatVector();
-        cv.split(adjustedHSV, adjustedHSVChannels);
-  
-        const hsvMergeChannels = new cv.MatVector();
-        hsvMergeChannels.push_back(hsvChannels.get(0)); // Hue
-        hsvMergeChannels.push_back(adjustedHSVChannels.get(1)); // Saturation
-        hsvMergeChannels.push_back(scaledValue); // Adjusted Value
-        cv.merge(hsvMergeChannels, adjustedHSV);
-  
-        const result = new cv.Mat();
-        cv.cvtColor(adjustedHSV, result, cv.COLOR_HSV2BGR);
-        cv.cvtColor(result, result, cv.COLOR_BGR2RGB);
-  
-        // Cleanup
-        originalMat.delete();
-        hsvMat.delete();
-        hsvChannels.delete();
-        value.delete();
-        scaledValue.delete();
-        resultMat.delete();
-        adjustedHSV.delete();
-        adjustedHSVChannels.delete();
-        hsvMergeChannels.delete();
-  
-        return result;
+        cv.convertScaleAbs(value, scaledValue, 1 + highlightFactor * 0.5, 0);
       }
+
+      channels.set(2, scaledValue);
+
+      cv.merge(channels, hsvImage);
+
+      let adjustedImage = new cv.Mat();
+      cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+
+      if (highlightFactor >= 0) {
+        const boostedImage = this.boostLowChannel(highlightFactor, adjustedImage);
+        adjustedImage.delete();
+        adjustedImage = boostedImage;
+      }
+
+      const finalImage = new cv.Mat();
+      cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+
+      src.delete();
+      originalImage.delete();
+      hsvImage.delete();
+      channels.delete();
+      scaledValue.delete();
+      adjustedImage.delete();
+
+      return finalImage;
     } catch (error) {
       console.error("Error in modify_image_highlights:", error);
-      return inputImage;
+      throw error;
     }
   }
 
