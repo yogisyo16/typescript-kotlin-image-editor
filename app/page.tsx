@@ -114,6 +114,22 @@ export default function Home() {
     imageLoaded,
   ]);
 
+  const handleReset = () => {
+    if (editorRef.current) {
+      editorRef.current.reset();
+      setExposureScore(0);
+      setTemperatureScore(0);
+      setTintScore(0);
+      setHighlightsScore(0);
+      setShadowsScore(0);
+      setBlackScore(0);
+      setWhiteScore(0);
+      setContrastScore(0);
+      setVibranceScore(0);
+      setSaturationScore(0);
+    }
+  };
+
   return (
     <div>
       <Script
@@ -136,6 +152,14 @@ export default function Home() {
                     onChange={handleFileChange}
                   />
                 </label>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
+                    onClick={handleReset}
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col items-center">
                 <div className="ml-4">
