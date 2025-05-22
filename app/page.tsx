@@ -117,16 +117,16 @@ export default function Home() {
   const handleReset = () => {
     if (editorRef.current) {
       editorRef.current.reset();
-      setExposureScore(0);
-      setTemperatureScore(0);
-      setTintScore(0);
-      setHighlightsScore(0);
-      setShadowsScore(0);
-      setBlackScore(0);
-      setWhiteScore(0);
-      setContrastScore(0);
-      setVibranceScore(0);
-      setSaturationScore(0);
+      setExposureScore(editorRef.current["exposureValue"]);
+      setTemperatureScore(editorRef.current["temperatureValue"]);
+      setTintScore(editorRef.current["tintValue"]);
+      setHighlightsScore(editorRef.current["highlightValue"]);
+      setShadowsScore(editorRef.current["shadowValue"]);
+      setBlackScore(editorRef.current["blackValue"]);
+      setWhiteScore(editorRef.current["whiteValue"]);
+      setContrastScore(editorRef.current["contrastValue"]);
+      setVibranceScore(editorRef.current["vibranceValue"]);
+      setSaturationScore(editorRef.current["saturationValue"]);
     }
   };
 
@@ -134,6 +134,31 @@ export default function Home() {
     if(editorRef.current) {
       editorRef.current.undo();
       setExposureScore(editorRef.current["exposureValue"]);
+      setTemperatureScore(editorRef.current["temperatureValue"]);
+      setTintScore(editorRef.current["tintValue"]);
+      setHighlightsScore(editorRef.current["highlightValue"]);
+      setShadowsScore(editorRef.current["shadowValue"]);
+      setBlackScore(editorRef.current["blackValue"]);
+      setWhiteScore(editorRef.current["whiteValue"]);
+      setContrastScore(editorRef.current["contrastValue"]);
+      setVibranceScore(editorRef.current["vibranceValue"]);
+      setSaturationScore(editorRef.current["saturationValue"]);
+    }
+  }
+
+  const handleRedo = () => {
+    if (editorRef.current) {
+      editorRef.current.redo();
+      setExposureScore(editorRef.current["exposureValue"]);
+      setTemperatureScore(editorRef.current["temperatureValue"]);
+      setTintScore(editorRef.current["tintValue"]);
+      setHighlightsScore(editorRef.current["highlightValue"]);
+      setShadowsScore(editorRef.current["shadowValue"]);
+      setBlackScore(editorRef.current["blackValue"]);
+      setWhiteScore(editorRef.current["whiteValue"]);
+      setContrastScore(editorRef.current["contrastValue"]);
+      setVibranceScore(editorRef.current["vibranceValue"]);
+      setSaturationScore(editorRef.current["saturationValue"]);
     }
   }
 
