@@ -148,6 +148,9 @@ export class HonchoEditorClass implements HonchoEditor {
     finalHsvChannels.delete();
     mergedHsv.delete();
 
+    // debugging for config value
+    // console.log("Exposure From Config: ", this.exposureValue);
+    // console.log("Exposure Value: ", exposure);
     return finalHSV;
   }
 
