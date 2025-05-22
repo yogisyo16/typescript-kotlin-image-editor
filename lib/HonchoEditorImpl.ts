@@ -58,6 +58,8 @@ export class HonchoEditorClass implements HonchoEditor {
   private contrastValue: number = 0;
   private saturationValue: number = 0;
   private vibranceValue: number = 0;
+  // -- config for history
+  private history: Config[] = [];
 
   
 
@@ -2019,20 +2021,78 @@ export class HonchoEditorClass implements HonchoEditor {
     whites: number,
     contrast: number,
     saturation: number,
-    vibrance: number
+    vibrance: number,
+    inputImage: cv.Mat,
+    canvasRef: HTMLCanvasElement
   ): Promise<void> {
-    const config: Config = {
-      Exposure: exposure,
-      Temp: temperature,
-      Tint: tint,
-      Highlights: highlights,
-      Shadow: shadows,
-      Black: blacks,
-      Whites: whites,
-      Contrast: contrast,
-      Saturation: saturation,
-      Vibrance: vibrance,
-    };
+
+    if (!inputImage || !canvasRef) {
+      throw new Error("Image or canvas not available");
+    }
+
+    try {
+      let src = inputImage.clone();
+      if (!src || src.empty()) {
+        throw new Error("Failed to read image from imageRef");
+      }
+
+      let currentImage = src;
+      let tempImage = await this.modify_image_exposure(this.exposureValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_temperature(this.temperatureValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_tint(this.tintValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_highlights(this.highlightValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_shadows(this.shadowValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_blacks(this.blackValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_whites(this.whiteValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_contrast(this.contrastValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_saturation(this.saturationValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+
+      tempImage = await this.modify_image_vibrance(this.vibranceValue, currentImage);
+      currentImage.delete();
+      currentImage = tempImage;
+      
+    } catch (error) {
+      console.error("Error in modify_image_colors:", error);
+      throw error;
+    }
+    this.history.push({
+      Exposure: this.exposureValue,
+      Temperature: this.temperatureValue,
+      Shadow: this.shadowValue,
+      Highlights: this.highlightValue,
+      Tint: this.tintValue,
+      Black: this.blackValue,
+      Whites: this.whiteValue,
+      Contrast: this.contrastValue,
+      Saturation: this.saturationValue,
+      Vibrance: this.vibranceValue
+    });
   }
 
   // Set and Apply for config
@@ -2071,10 +2131,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   async redo(): Promise<void> {
-    if (this.currentConfigIndex < this.configHistory.length - 1) {
-      this.currentConfigIndex++;
-      await this.applyOpenCV(this.configHistory[this.currentConfigIndex]);
-    }
+    
   }
 
   reset(): void {
@@ -2099,33 +2156,11 @@ export class HonchoEditorClass implements HonchoEditor {
     }
   }
 
-  getFlattenConfig(configs: Config[]): Config {
-    return configs.reduce((acc, curr) => ({
-      Exposure: acc.Exposure + curr.Exposure,
-      Temp: acc.Temp + curr.Temp,
-      Shadow: acc.Shadow + curr.Shadow,
-      Highlights: acc.Highlights + curr.Highlights,
-      Tint: acc.Tint + curr.Tint,
-      Black: acc.Black + curr.Black,
-      Whites: acc.Whites + curr.Whites,
-      Contrast: acc.Contrast + curr.Contrast,
-      Saturation: acc.Saturation + curr.Saturation,
-      Vibrance: acc.Vibrance + curr.Vibrance,
-    }), {
-      Exposure: 0,
-      Temp: 0,
-      Shadow: 0,
-      Highlights: 0,
-      Tint: 0,
-      Black: 0,
-      Whites: 0,
-      Contrast: 0,
-      Saturation: 0,
-      Vibrance: 0,
-    });
+  getFlattenConfig(configs: Config): Config {
+    return configs;
   }
 
-  async applyOpenCV(config: Config): Promise<void> {
+  applyOpenCV(config: Config): void {
     return ;
   }
 }
