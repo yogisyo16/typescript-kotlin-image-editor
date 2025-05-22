@@ -130,6 +130,13 @@ export default function Home() {
     }
   };
 
+  const handleUndo = () => {
+    if(editorRef.current) {
+      editorRef.current.undo();
+      setExposureScore(editorRef.current["exposureValue"]);
+    }
+  }
+
   return (
     <div>
       <Script
@@ -158,6 +165,12 @@ export default function Home() {
                     onClick={handleReset}
                   >
                     Reset
+                  </button>
+                  <button
+                    className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
+                    onClick={handleUndo}
+                  >
+                    Undo
                   </button>
                 </div>
               </div>
