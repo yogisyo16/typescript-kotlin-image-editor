@@ -114,6 +114,44 @@ export default function Home() {
     imageLoaded,
   ]);
 
+  // useEffect(() => {
+  //   if (
+  //     editorRef.current &&
+  //     isCvLoaded &&
+  //     imageLoaded &&
+  //     imgRef.current &&
+  //     canvasRef.current
+  //   ) {
+  //     editorRef.current.adjust_image_colors_merge(
+  //       exposureScore,
+  //       temperatureScore,
+  //       tintScore,
+  //       highlightsScore,
+  //       shadowsScore,
+  //       blackScore,
+  //       whiteScore,
+  //       contrastScore,
+  //       saturationScore,
+  //       vibranceScore,
+  //       imgRef.current,
+  //       canvasRef.current
+  //     );
+  //   }
+  // }, [
+  //   exposureScore,
+  //   temperatureScore,
+  //   tintScore,
+  //   highlightsScore,
+  //   shadowsScore,
+  //   blackScore,
+  //   whiteScore,
+  //   contrastScore,
+  //   saturationScore,
+  //   vibranceScore,
+  //   isCvLoaded,
+  //   imageLoaded,
+  // ]);
+
   const handleReset = () => {
     if (editorRef.current) {
       editorRef.current.reset();

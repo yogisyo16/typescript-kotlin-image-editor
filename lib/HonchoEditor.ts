@@ -39,7 +39,7 @@ export interface HonchoEditor {
     contrast: number,
     saturation: number,
     vibrance: number,
-    inputImage: cv.Mat,
+    inputImage: HTMLImageElement,
     canvasRef: HTMLCanvasElement
   ): Promise<void>;
   

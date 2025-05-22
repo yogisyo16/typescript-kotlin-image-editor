@@ -2016,13 +2016,13 @@ export class HonchoEditorClass implements HonchoEditor {
     temperature: number,
     tint: number,
     highlights: number,
-    shadows: number,
-    blacks: number,
-    whites: number,
+    shadow: number,
+    black: number,
+    white: number,
     contrast: number,
     saturation: number,
     vibrance: number,
-    inputImage: cv.Mat,
+    inputImage: HTMLImageElement,
     canvasRef: HTMLCanvasElement
   ): Promise<void> {
 
@@ -2031,68 +2031,72 @@ export class HonchoEditorClass implements HonchoEditor {
     }
 
     try {
-      let src = inputImage.clone();
+      let src = cv.imread(inputImage);
       if (!src || src.empty()) {
         throw new Error("Failed to read image from imageRef");
       }
-
       let currentImage = src;
-      let tempImage = await this.modify_image_exposure(this.exposureValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_temperature(this.temperatureValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_tint(this.tintValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_highlights(this.highlightValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_shadows(this.shadowValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_blacks(this.blackValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_whites(this.whiteValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_contrast(this.contrastValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_saturation(this.saturationValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
-
-      tempImage = await this.modify_image_vibrance(this.vibranceValue, currentImage);
-      currentImage.delete();
-      currentImage = tempImage;
       
+      if (exposure !== 0) {
+        currentImage = await this.modify_image_exposure(this.exposureValue, currentImage);
+      }
+
+      if (temperature !== 0) {
+        currentImage = await this.modify_image_temperature(this.temperatureValue, currentImage);
+      }
+
+      if (tint !== 0) {
+        currentImage = await this.modify_image_tint(this.tintValue, currentImage);
+      }
+
+      if (highlights !== 0) {
+        currentImage = await this.modify_image_highlights(this.highlightValue, currentImage);
+      }
+
+      if (shadow !== 0) {
+        currentImage = await this.modify_image_shadows(this.shadowValue, currentImage);
+      }
+
+      if (black !== 0) {
+        currentImage = await this.modify_image_blacks(this.blackValue, currentImage);
+      }
+
+      if (white !== 0) {
+        currentImage = await this.modify_image_whites(this.whiteValue, currentImage);
+      }
+
+      if (contrast !== 0) {
+        currentImage = await this.modify_image_contrast(this.contrastValue, currentImage);
+      }
+
+      if (saturation !== 0) {
+        currentImage = await this.modify_image_saturation(this.saturationValue, currentImage);
+      }
+
+      if (vibrance !== 0) {
+        currentImage = await this.modify_image_vibrance(this.vibranceValue, currentImage);
+      }
+
+      this.history.push({
+        Exposure: this.exposureValue,
+        Temperature: this.temperatureValue,
+        Shadow: this.shadowValue,
+        Highlights: this.highlightValue,
+        Tint: this.tintValue,
+        Black: this.blackValue,
+        Whites: this.whiteValue,
+        Contrast: this.contrastValue,
+        Saturation: this.saturationValue,
+        Vibrance: this.vibranceValue
+      });
+
+      cv.imshow(canvasRef, currentImage);
+
     } catch (error) {
       console.error("Error in modify_image_colors:", error);
       throw error;
     }
-    this.history.push({
-      Exposure: this.exposureValue,
-      Temperature: this.temperatureValue,
-      Shadow: this.shadowValue,
-      Highlights: this.highlightValue,
-      Tint: this.tintValue,
-      Black: this.blackValue,
-      Whites: this.whiteValue,
-      Contrast: this.contrastValue,
-      Saturation: this.saturationValue,
-      Vibrance: this.vibranceValue
-    });
+    
   }
 
   // Set and Apply for config
