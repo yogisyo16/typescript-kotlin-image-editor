@@ -7,7 +7,7 @@ export interface Config {
   Highlights: number; // For ServerConfig Highlights
   Tint: number; // For ServerConfig Tint
   Black: number; // For ServerConfig Black
-  Whites: number; // For ServerConfig Whites
+  White: number; // For ServerConfig White
   Contrast: number; // For ServerConfig Contrast
   Saturation: number; // For ServerConfig Saturation
   Vibrance: number; // For ServerConfig Vibrance

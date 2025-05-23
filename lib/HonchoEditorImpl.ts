@@ -42,7 +42,6 @@ export function useOpenCV() {
 export class HonchoEditorClass implements HonchoEditor {
   private imgElement: HTMLImageElement;
   private canvasElement: HTMLCanvasElement;
-  private configHistory: Config[] = [];
   private currentConfigIndex: number = -1;
   private listener: Listener | null = null;
   // -- variable for adjustment
@@ -59,7 +58,7 @@ export class HonchoEditorClass implements HonchoEditor {
   private saturationValue: number = 0;
   private vibranceValue: number = 0;
   // -- config for history
-  private history: Config[] = [];
+  public configHistory: Config[] = [];
 
   
 
@@ -73,9 +72,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   consume(serverConfig: Config[]): string {
-    // this.config HISTORY = serverConfig;
-    // this.currentConfigIndex = serverConfig.length - 1;
-    // this.applyOpenCV(this.getFlattenConfig(serverConfig));
+    
     return "Configs consumed";
   }
 
@@ -978,8 +975,65 @@ export class HonchoEditorClass implements HonchoEditor {
 
   // -- Implement adjustment Blacks
   async modify_image_blacks(blacks: number, inputImage: cv.Mat): Promise<cv.Mat> {
-    // Implement based on Kotlin's modifyImageBlacks
-    return inputImage.clone();
+    try {
+      const src = inputImage.clone();
+      if (!src || src.empty()) {
+        throw new Error("Input image is empty");
+      }
+      this.blackValue = blacks;
+
+      const originalImage = new cv.Mat();
+      cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
+
+      const blackFactor = this.blackValue / 100;
+
+      const hsvImage = new cv.Mat();
+      cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsvImage, channels);
+      const hue = channels.get(0);
+      const saturation = channels.get(1);
+      const value = channels.get(2);
+
+      const scaledValue = new cv.Mat();
+      let contrastFactor = 0;
+      if (blackFactor >= 0) {
+        cv.convertScaleAbs(value, scaledValue, 1 - blackFactor * 0.5, -blackFactor * 10);
+      } else {
+        contrastFactor = 0.1 * (1 - Math.exp(-Math.abs(blackFactor) / 0.4));
+        cv.convertScaleAbs(value, scaledValue, 1 + contrastFactor, blackFactor * 15);
+      }
+
+      channels.set(2, scaledValue);
+
+      cv.merge(channels, hsvImage);
+
+      let adjustedImage = new cv.Mat();
+      cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+
+      // if (blackFactor >= 0 && typeof cv.GaussianBlur === 'function') {
+      //   const blurredImage = new cv.Mat();
+      //   cv.GaussianBlur(adjustedImage, blurredImage, { width: 3, height: 3 }, 0);
+      //   adjustedImage.delete();
+      //   adjustedImage = blurredImage;
+      // }
+
+      const finalImage = new cv.Mat();
+      cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+
+      src.delete();
+      originalImage.delete();
+      hsvImage.delete();
+      channels.delete();
+      scaledValue.delete();
+      adjustedImage.delete();
+
+      return finalImage;
+    } catch (error) {
+      console.error("Error in modify_image_blacks:", error);
+      throw error;
+    }
   }
 
   // -- Scaling for white
@@ -2077,18 +2131,20 @@ export class HonchoEditorClass implements HonchoEditor {
         currentImage = await this.modify_image_vibrance(this.vibranceValue, currentImage);
       }
 
-      this.history.push({
+      this.configHistory.push({
         Exposure: this.exposureValue,
         Temperature: this.temperatureValue,
         Shadow: this.shadowValue,
         Highlights: this.highlightValue,
         Tint: this.tintValue,
         Black: this.blackValue,
-        Whites: this.whiteValue,
+        White: this.whiteValue,
         Contrast: this.contrastValue,
         Saturation: this.saturationValue,
         Vibrance: this.vibranceValue
       });
+
+      console.log(this.configHistory);
 
       cv.imshow(canvasRef, currentImage);
 
@@ -2099,39 +2155,16 @@ export class HonchoEditorClass implements HonchoEditor {
     
   }
 
-  // Set and Apply for config
-  // setShadow(shadow: number): void {
-  //   this.currentConfig.Shadow = shadow;
-  // }
-
-  // setTemp(temp: number): void {
-  //   this.currentConfig.Temp = temp;
-  // }
-
-  // setTint(tint: number): void {
-  //   this.currentConfig.Tint = tint;
-  // }
-
-  // applyShadow(shadow: number): void {
-  //   this.setShadow(shadow);
-  //   this.applyOpenCV(this.currentConfig);
-  // }
-
-  // applyTemp(temp: number): void {
-  //   this.setTemp(temp);
-  //   this.applyOpenCV(this.currentConfig);
-  // }
-
-  // applyTint(tint: number): void {
-  //   this.setTint(tint);
-  //   this.applyOpenCV(this.currentConfig);
-  // }
-
+  // Logic for undo
+  // for now having a issues where i'm using my previous code undo it can only go back 1 time
+  /// for example = 
+  // 1. expo = 0 (initial state), {user slide value} expo = 4
+  // initial state is save into configHistory.
   async undo(): Promise<void> {
     this.exposureValue = 2.5;
     this.contrastValue = 50;
-    console.log(this.exposureValue);
-    console.log(this.contrastValue);
+    // console.log(this.exposureValue);
+    // console.log(this.contrastValue);
   }
 
   async redo(): Promise<void> {

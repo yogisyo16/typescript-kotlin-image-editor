@@ -22,6 +22,7 @@ export default function Home() {
   const [saturationScore, setSaturationScore] = useState(0);
   const [vibranceScore, setVibranceScore] = useState(0);
 
+  const historyOn = [];
   const onOpenCVLoad = () => {
     setIsCvLoaded(true);
   };
@@ -64,6 +65,7 @@ export default function Home() {
     ) {
       const applyAdjustments = async () => {
         let mat = cv.imread(imgRef.current!);
+        
         if (exposureScore !== 0) {
           mat = await editorRef.current!.modify_image_exposure(exposureScore, mat);
         }
