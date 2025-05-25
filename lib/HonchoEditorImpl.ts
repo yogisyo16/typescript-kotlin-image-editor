@@ -2163,6 +2163,9 @@ export class HonchoEditorClass implements HonchoEditor {
   async undo(): Promise<void> {
     this.exposureValue = 2.5;
     this.contrastValue = 50;
+    // if (condition) {
+      
+    // }
     // console.log(this.exposureValue);
     // console.log(this.contrastValue);
   }
