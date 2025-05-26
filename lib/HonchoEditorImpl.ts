@@ -2159,20 +2159,35 @@ export class HonchoEditorClass implements HonchoEditor {
       // Every user slider is saved into the configHistory.
       // So for example user want to change from 0 to 5, but sliding it
       // It will save all the step. (0, 1, 2, 3, 4, 5).
-      this.configHistory.push({
-        Exposure: this.exposureValue,
-        Temperature: this.temperatureValue,
-        Shadow: this.shadowValue,
-        Highlights: this.highlightValue,
-        Tint: this.tintValue,
-        Black: this.blackValue,
-        White: this.whiteValue,
-        Contrast: this.contrastValue,
-        Saturation: this.saturationValue,
-        Vibrance: this.vibranceValue
-      });
-
-      console.log(this.configHistory);
+      if (this.configHistory.length == 0) {
+        this.configHistory.push({
+          Exposure: this.exposureValue,
+          Temperature: this.temperatureValue,
+          Shadow: this.shadowValue,
+          Highlights: this.highlightValue,
+          Tint: this.tintValue,
+          Black: this.blackValue,
+          White: this.whiteValue,
+          Contrast: this.contrastValue,
+          Saturation: this.saturationValue,
+          Vibrance: this.vibranceValue
+        });
+        console.log("first push: ",this.configHistory);
+      } else {
+        this.configHistory.push({
+          Exposure: this.exposureValue,
+          Temperature: this.temperatureValue,
+          Shadow: this.shadowValue,
+          Highlights: this.highlightValue,
+          Tint: this.tintValue,
+          Black: this.blackValue,
+          White: this.whiteValue,
+          Contrast: this.contrastValue,
+          Saturation: this.saturationValue,
+          Vibrance: this.vibranceValue
+        })
+        console.log("length > 0: ",this.configHistory);
+      }
 
       cv.imshow(canvasRef, currentImage);
 
@@ -2191,9 +2206,10 @@ export class HonchoEditorClass implements HonchoEditor {
   async undo(): Promise<void> {
     if (this.redoStack.length >= 0) {
       const newConfig = this.configHistory.pop();
+      // this.configHistory.pop();
       const undoConfig = this.configHistory.length > 0 ? this.configHistory[this.configHistory.length - 1] : null;
       const checkLenght = this.configHistory.length;
-      console.log("checkLenght: ", checkLenght);
+      // console.log("checkLenght: ", checkLenght);
       // Problem with undo
       // It working BUT
       // if there's 2 adjustment with different array for example
@@ -2223,8 +2239,9 @@ export class HonchoEditorClass implements HonchoEditor {
           this.vibranceValue = undoConfig.Vibrance;  
         }
         
-        console.log("this is inside redo: ", this.redoStack);
+        // console.log("this is inside redo: ", this.redoStack);
         console.log("this is inside undo: ", undoConfig);
+        console.log("inside configHistory: ", this.configHistory);
       }
     } 
     // console.log("after pop: ", this.redoStack);
@@ -2234,7 +2251,7 @@ export class HonchoEditorClass implements HonchoEditor {
   async redo(): Promise<void> {
     if (this.configHistory.length >= 0) {
       const redoConfig = this.redoStack.pop();
-      console.log('this is inside redo: ', redoConfig);
+      // console.log('this is inside redo: ', redoConfig);
       const nowConfig = this.redoStack.length >= 0 ? this.redoStack[this.redoStack.length - 1] : null;
       if (redoConfig) {
         this.configHistory.push(redoConfig);
