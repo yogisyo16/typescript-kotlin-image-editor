@@ -55,67 +55,6 @@ export default function Home() {
   }, [isCvLoaded, imageLoaded]);
 
   // Apply adjustments when sliders change
-  useEffect(() => {
-    if (
-      editorRef.current &&
-      isCvLoaded &&
-      imageLoaded &&
-      imgRef.current &&
-      canvasRef.current
-    ) {
-      const applyAdjustments = async () => {
-        let mat = cv.imread(imgRef.current!);
-        
-        if (exposureScore !== 0) {
-          mat = await editorRef.current!.modify_image_exposure(exposureScore, mat);
-        }
-        if (temperatureScore !== 0) {
-          mat = await editorRef.current!.modify_image_temperature(temperatureScore, mat);
-        }
-        if (tintScore !== 0) {
-          mat = await editorRef.current!.modify_image_tint(tintScore, mat);
-        }
-        if (highlightsScore !== 0) {
-          mat = await editorRef.current!.modify_image_highlights(highlightsScore, mat);
-        }
-        if (shadowsScore !== 0) {
-          mat = await editorRef.current!.modify_image_shadows(shadowsScore, mat);
-        }
-        if (blackScore !== 0) {
-          mat = await editorRef.current!.modify_image_blacks(blackScore, mat);
-        }
-        if (whiteScore !== 0) {
-          mat = await editorRef.current!.modify_image_whites(whiteScore, mat);
-        }
-        if (contrastScore !== 0) {
-          mat = await editorRef.current!.modify_image_contrast(contrastScore, mat);
-        }
-        if (saturationScore !== 0) {
-          mat = await editorRef.current!.modify_image_saturation(saturationScore, mat);
-        }
-        if (vibranceScore !== 0) {
-          mat = await editorRef.current!.modify_image_vibrance(vibranceScore, mat);
-        }
-        cv.imshow(canvasRef.current!, mat);
-        mat.delete();
-      };
-      applyAdjustments();
-    }
-  }, [
-    exposureScore,
-    temperatureScore,
-    tintScore,
-    highlightsScore,
-    shadowsScore,
-    blackScore,
-    whiteScore,
-    contrastScore,
-    saturationScore,
-    vibranceScore,
-    isCvLoaded,
-    imageLoaded,
-  ]);
-
   // useEffect(() => {
   //   if (
   //     editorRef.current &&
@@ -124,20 +63,43 @@ export default function Home() {
   //     imgRef.current &&
   //     canvasRef.current
   //   ) {
-  //     editorRef.current.adjust_image_colors_merge(
-  //       exposureScore,
-  //       temperatureScore,
-  //       tintScore,
-  //       highlightsScore,
-  //       shadowsScore,
-  //       blackScore,
-  //       whiteScore,
-  //       contrastScore,
-  //       saturationScore,
-  //       vibranceScore,
-  //       imgRef.current,
-  //       canvasRef.current
-  //     );
+  //     const applyAdjustments = async () => {
+  //       let mat = cv.imread(imgRef.current!);
+        
+  //       if (exposureScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_exposure(exposureScore, mat);
+  //       }
+  //       if (temperatureScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_temperature(temperatureScore, mat);
+  //       }
+  //       if (tintScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_tint(tintScore, mat);
+  //       }
+  //       if (highlightsScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_highlights(highlightsScore, mat);
+  //       }
+  //       if (shadowsScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_shadows(shadowsScore, mat);
+  //       }
+  //       if (blackScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_blacks(blackScore, mat);
+  //       }
+  //       if (whiteScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_whites(whiteScore, mat);
+  //       }
+  //       if (contrastScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_contrast(contrastScore, mat);
+  //       }
+  //       if (saturationScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_saturation(saturationScore, mat);
+  //       }
+  //       if (vibranceScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_vibrance(vibranceScore, mat);
+  //       }
+  //       cv.imshow(canvasRef.current!, mat);
+  //       mat.delete();
+  //     };
+  //     applyAdjustments();
   //   }
   // }, [
   //   exposureScore,
@@ -153,6 +115,47 @@ export default function Home() {
   //   isCvLoaded,
   //   imageLoaded,
   // ]);
+
+  useEffect(() => {
+    if (
+      editorRef.current &&
+      isCvLoaded &&
+      imageLoaded &&
+      imgRef.current &&
+      canvasRef.current
+    ) {
+      // console.log("Adjusting image colors");
+      editorRef.current.adjust_image_colors_merge(
+        exposureScore,
+        temperatureScore,
+        tintScore,
+        highlightsScore,
+        shadowsScore,
+        blackScore,
+        whiteScore,
+        contrastScore,
+        saturationScore,
+        vibranceScore,
+        imgRef.current,
+        canvasRef.current
+      );
+    }
+  }, [
+    exposureScore,
+    temperatureScore,
+    tintScore,
+    highlightsScore,
+    shadowsScore,
+    blackScore,
+    whiteScore,
+    contrastScore,
+    saturationScore,
+    vibranceScore,
+    imgRef,
+    canvasRef,
+    isCvLoaded,
+    imageLoaded,
+  ]);
 
   const handleReset = () => {
     if (editorRef.current) {

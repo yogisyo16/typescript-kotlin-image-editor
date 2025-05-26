@@ -59,6 +59,7 @@ export class HonchoEditorClass implements HonchoEditor {
   private vibranceValue: number = 0;
   // -- config for history
   public configHistory: Config[] = [];
+  public redoStack: Config[] = [];
 
   
 
@@ -2090,47 +2091,74 @@ export class HonchoEditorClass implements HonchoEditor {
         throw new Error("Failed to read image from imageRef");
       }
       let currentImage = src;
+      // let currentImage16S = new Int16Array(currentImage.data);
+      // let dataExpo;
+      // let dataTemp;
+      // let dataTint;
+      // let dataHigh;
+      // let dataShadow;
+      // let dataBlack;
+      // let dataWhite;
+      // let dataContrast;
+      // let dataSaturation;
+      // let dataVibrance;
       
       if (exposure !== 0) {
-        currentImage = await this.modify_image_exposure(this.exposureValue, currentImage);
+        this.exposureValue = exposure;
+        currentImage = (await this.modify_image_exposure(this.exposureValue, currentImage));
       }
 
       if (temperature !== 0) {
-        currentImage = await this.modify_image_temperature(this.temperatureValue, currentImage);
+        this.temperatureValue = temperature;
+        currentImage = (await this.modify_image_temperature(this.temperatureValue, currentImage));
       }
 
       if (tint !== 0) {
-        currentImage = await this.modify_image_tint(this.tintValue, currentImage);
+        this.tintValue = tint;
+        currentImage = (await this.modify_image_tint(this.tintValue, currentImage));
       }
 
       if (highlights !== 0) {
-        currentImage = await this.modify_image_highlights(this.highlightValue, currentImage);
+        this.highlightValue = highlights;
+        currentImage = (await this.modify_image_highlights(this.highlightValue, currentImage));
       }
 
       if (shadow !== 0) {
-        currentImage = await this.modify_image_shadows(this.shadowValue, currentImage);
+        this.shadowValue = shadow;
+        currentImage = (await this.modify_image_shadows(this.shadowValue, currentImage));
       }
 
       if (black !== 0) {
-        currentImage = await this.modify_image_blacks(this.blackValue, currentImage);
+        this.blackValue = black;
+        currentImage = (await this.modify_image_blacks(this.blackValue, currentImage));
       }
 
       if (white !== 0) {
-        currentImage = await this.modify_image_whites(this.whiteValue, currentImage);
+        this.whiteValue = white;
+        currentImage = (await this.modify_image_whites(this.whiteValue, currentImage));
       }
 
       if (contrast !== 0) {
-        currentImage = await this.modify_image_contrast(this.contrastValue, currentImage);
+        this.contrastValue = contrast;
+        currentImage = (await this.modify_image_contrast(this.contrastValue, currentImage));
       }
 
       if (saturation !== 0) {
-        currentImage = await this.modify_image_saturation(this.saturationValue, currentImage);
+        this.saturationValue = saturation;
+        currentImage = (await this.modify_image_saturation(this.saturationValue, currentImage));
       }
 
       if (vibrance !== 0) {
-        currentImage = await this.modify_image_vibrance(this.vibranceValue, currentImage);
+        this.vibranceValue = vibrance;
+        currentImage = (await this.modify_image_vibrance(this.vibranceValue, currentImage));
       }
 
+      // let deltaExposure = dataExpo - currentImage16S;
+
+      // Problem with this save into configHistory.
+      // Every user slider is saved into the configHistory.
+      // So for example user want to change from 0 to 5, but sliding it
+      // It will save all the step. (0, 1, 2, 3, 4, 5).
       this.configHistory.push({
         Exposure: this.exposureValue,
         Temperature: this.temperatureValue,
@@ -2144,7 +2172,7 @@ export class HonchoEditorClass implements HonchoEditor {
         Vibrance: this.vibranceValue
       });
 
-      console.log(this.configHistory);
+      // console.log(this.configHistory);
 
       cv.imshow(canvasRef, currentImage);
 
@@ -2161,21 +2189,56 @@ export class HonchoEditorClass implements HonchoEditor {
   // 1. expo = 0 (initial state), {user slide value} expo = 4
   // initial state is save into configHistory.
   async undo(): Promise<void> {
-    this.exposureValue = 2.5;
-    this.contrastValue = 50;
-    // if (condition) {
-      
-    // }
-    // console.log(this.exposureValue);
+    if (this.redoStack.length >= 0) {
+      const newConfig = this.configHistory.pop();
+      const undoConfig = this.configHistory.length > 0 ? this.configHistory[this.configHistory.length - 1] : null;
+      const checkLenght = this.configHistory.length;
+      console.log("checkLenght: ", checkLenght);
+      // Problem with undo
+      // It working BUT
+      // if there's 2 adjustment with different array for example
+      // 0 [] = [expo=0, temp=0] initial state
+      // 1 [] = [expo=1, temp=0]
+      // 2 [] = [expo=1, temp=2]
+      // Hit undo
+      // array 2 is push into redo and array 1 is pop into undo
+      // resulting
+      // 0 [] = [expo=0, temp=0] initial state
+      // 1 [] = [expo=1, temp=0]
+      // and for the second undo still showing the same result of array
+      // untill the third undo is hit
+      // going back to the initial state
+      if(newConfig){
+        this.redoStack.push(newConfig);
+        if (undoConfig) {
+          this.exposureValue = undoConfig.Exposure;
+          this.temperatureValue = undoConfig.Temperature;
+          this.tintValue = undoConfig.Tint;
+          this.highlightValue = undoConfig.Highlights;
+          this.shadowValue = undoConfig.Shadow;
+          this.blackValue = undoConfig.Black;
+          this.whiteValue = undoConfig.White;
+          this.contrastValue = undoConfig.Contrast;
+          this.saturationValue = undoConfig.Saturation;
+          this.vibranceValue = undoConfig.Vibrance;  
+        }
+        
+        console.log("this is inside redo: ", this.redoStack);
+        console.log("this is inside undo: ", undoConfig);
+      }
+    } 
+    // console.log("after pop: ", this.redoStack);
     // console.log(this.contrastValue);
   }
 
   async redo(): Promise<void> {
-    
+    const redoConfig = this.redoStack.pop();
   }
 
   reset(): void {
     const mat = cv.imread(this.imgElement);
+    this.configHistory = [];
+    this.redoStack = [];
     this.exposureValue = 0;
     this.temperatureValue = 0;
     this.tintValue = 0;
