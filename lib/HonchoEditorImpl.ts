@@ -2233,6 +2233,21 @@ export class HonchoEditorClass implements HonchoEditor {
 
   async redo(): Promise<void> {
     const redoConfig = this.redoStack.pop();
+    console.log('this is inside redo: ', redoConfig);
+    const nowConfig = this.redoStack.length >= 0 ? this.redoStack[this.redoStack.length - 1] : null;
+    if (redoConfig) {
+      this.configHistory.push(redoConfig);
+      this.exposureValue = redoConfig.Exposure;
+      this.temperatureValue = redoConfig.Temperature;
+      this.tintValue = redoConfig.Tint;
+      this.highlightValue = redoConfig.Highlights;
+      this.shadowValue = redoConfig.Shadow;
+      this.blackValue = redoConfig.Black;
+      this.whiteValue = redoConfig.White;
+      this.contrastValue = redoConfig.Contrast;
+      this.saturationValue = redoConfig.Saturation;
+      this.vibranceValue = redoConfig.Vibrance;
+    }
   }
 
   reset(): void {

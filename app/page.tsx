@@ -240,6 +240,12 @@ export default function Home() {
                   >
                     Undo
                   </button>
+                  <button
+                    className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
+                    onClick={handleRedo}
+                  >
+                    Redo
+                  </button>
                 </div>
               </div>
               <div className="flex flex-col items-center">
