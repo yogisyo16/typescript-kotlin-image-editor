@@ -391,7 +391,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-6">
               <div>
                 <h3 className="text-sm">Original</h3>
                 <img ref={imgRef} alt="Original" width={640} height={360} />

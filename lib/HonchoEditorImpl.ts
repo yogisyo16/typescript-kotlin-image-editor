@@ -2172,7 +2172,7 @@ export class HonchoEditorClass implements HonchoEditor {
         Vibrance: this.vibranceValue
       });
 
-      // console.log(this.configHistory);
+      console.log(this.configHistory);
 
       cv.imshow(canvasRef, currentImage);
 
