@@ -1,7 +1,8 @@
 import React from "react";
 import { HonchoEditor, Config, Listener } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
-import { useState } from "react";
+import { useState, MouseEvent } from "react";
+import { debounce } from "lodash";
 
 // Hook to manage and setup OpenCV
 export function useOpenCV() {
@@ -2159,6 +2160,10 @@ export class HonchoEditorClass implements HonchoEditor {
       // Every user slider is saved into the configHistory.
       // So for example user want to change from 0 to 5, but sliding it
       // It will save all the step. (0, 1, 2, 3, 4, 5).
+      // const debouncer = (ms: number) => new Promise(res => setTimeout(res, ms));
+      
+      // await debouncer(1000);
+      
       if (this.configHistory.length == 0) {
         this.configHistory.push({
           Exposure: this.exposureValue,
@@ -2173,31 +2178,33 @@ export class HonchoEditorClass implements HonchoEditor {
           Vibrance: this.vibranceValue
         });
         console.log("first push: ",this.configHistory);
-      } else {
-        this.configHistory.push({
-          Exposure: this.exposureValue,
-          Temperature: this.temperatureValue,
-          Shadow: this.shadowValue,
-          Highlights: this.highlightValue,
-          Tint: this.tintValue,
-          Black: this.blackValue,
-          White: this.whiteValue,
-          Contrast: this.contrastValue,
-          Saturation: this.saturationValue,
-          Vibrance: this.vibranceValue
-        })
-        console.log("length > 0: ",this.configHistory);
       }
-
+      
       cv.imshow(canvasRef, currentImage);
 
     } catch (error) {
       console.error("Error in modify_image_colors:", error);
       throw error;
     }
-    
   }
 
+  configHistotrypush() {
+    if (this.configHistory.length > 0) {
+      this.configHistory.push({
+        Exposure: this.exposureValue,
+        Temperature: this.temperatureValue,
+        Shadow: this.shadowValue,
+        Highlights: this.highlightValue,
+        Tint: this.tintValue,
+        Black: this.blackValue,
+        White: this.whiteValue,
+        Contrast: this.contrastValue,
+        Saturation: this.saturationValue,
+        Vibrance: this.vibranceValue
+      });
+      console.log("After length > 0: ",this.configHistory);
+    }
+  }
   // Logic for undo
   // for now having a issues where i'm using my previous code undo it can only go back 1 time
   /// for example = 

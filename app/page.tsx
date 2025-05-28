@@ -157,6 +157,12 @@ export default function Home() {
     imageLoaded,
   ]);
 
+  const saveHistory = () => {
+    if (editorRef.current) {
+      editorRef.current.configHistotrypush();
+    }
+  };
+
   const handleReset = () => {
     if (editorRef.current) {
       editorRef.current.reset();
@@ -259,6 +265,7 @@ export default function Home() {
                       step="0.1"
                       value={exposureScore}
                       onChange={(e) => setExposureScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -271,9 +278,8 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={temperatureScore}
-                      onChange={(e) =>
-                        setTemperatureScore(Number(e.target.value))
-                      }
+                      onChange={(e) => setTemperatureScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -287,6 +293,7 @@ export default function Home() {
                       step="1"
                       value={tintScore}
                       onChange={(e) => setTintScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -301,9 +308,8 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={highlightsScore}
-                      onChange={(e) =>
-                        setHighlightsScore(Number(e.target.value))
-                      }
+                      onChange={(e) => setHighlightsScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -317,6 +323,7 @@ export default function Home() {
                       step="1"
                       value={shadowsScore}
                       onChange={(e) => setShadowsScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -330,6 +337,7 @@ export default function Home() {
                       step="1"
                       value={blackScore}
                       onChange={(e) => setBlackScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -343,6 +351,7 @@ export default function Home() {
                       step="1"
                       value={whiteScore}
                       onChange={(e) => setWhiteScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -358,6 +367,7 @@ export default function Home() {
                       step="1"
                       value={contrastScore}
                       onChange={(e) => setContrastScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -370,9 +380,8 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={saturationScore}
-                      onChange={(e) =>
-                        setSaturationScore(Number(e.target.value))
-                      }
+                      onChange={(e) => setSaturationScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -386,6 +395,7 @@ export default function Home() {
                       step="1"
                       value={vibranceScore}
                       onChange={(e) => setVibranceScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>

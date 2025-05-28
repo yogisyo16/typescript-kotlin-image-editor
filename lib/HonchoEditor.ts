@@ -42,7 +42,7 @@ export interface HonchoEditor {
     inputImage: HTMLImageElement,
     canvasRef: HTMLCanvasElement
   ): Promise<void>;
-  
+  configHistotrypush(config: Config): void;
   // // Config setter
   // setShadow(shadow: number): void;
   // setTemp(temp: number): void;
