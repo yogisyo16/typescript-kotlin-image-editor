@@ -779,7 +779,7 @@ export class HonchoEditorClass implements HonchoEditor {
     this.tintValue = tint;
     const labImage = new cv.Mat();
     const originalMat = inputImage.clone();
-    this.tintValue = this.tintValue / 10;
+    tint = this.tintValue / 10;
     cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
     cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
 
@@ -806,9 +806,9 @@ export class HonchoEditorClass implements HonchoEditor {
     cv.divide(bChannel, bScalarMat255, bNorm);
     const bLabBoostFactor = this.sigmoid(bNorm, 11.0, 0.625, 8.0);
 
-    const adjustedMat = this.tintValue >= 0
-      ? await this.boostMagenta(this.tintValue, originalMat, lumScalingFactor)
-      : await this.boostGreen(this.tintValue, originalMat, lumScalingFactor);
+    const adjustedMat = tint >= 0
+      ? await this.boostMagenta(tint, originalMat, lumScalingFactor)
+      : await this.boostGreen(tint, originalMat, lumScalingFactor);
 
     // Clean up
     labImage.delete();
@@ -2210,7 +2210,7 @@ export class HonchoEditorClass implements HonchoEditor {
         Temperature: this.temperatureValue,
         Shadow: this.shadowValue,
         Highlights: this.highlightValue,
-        Tint: this.tintValue * 10,
+        Tint: this.tintValue,
         Black: this.blackValue,
         White: this.whiteValue,
         Contrast: this.contrastValue,
