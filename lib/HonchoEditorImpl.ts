@@ -2220,32 +2220,13 @@ export class HonchoEditorClass implements HonchoEditor {
       console.log("After length > 0: ",this.configHistory);
     }
   }
+
   // Logic for undo
-  // for now having a issues where i'm using my previous code undo it can only go back 1 time
-  /// for example = 
-  // 1. expo = 0 (initial state), {user slide value} expo = 4
-  // initial state is save into configHistory.
   async undo(): Promise<void> {
     if (this.redoStack.length >= 0) {
       const newConfig = this.configHistory.pop();
-      // this.configHistory.pop();
       const undoConfig = this.configHistory.length > 0 ? this.configHistory[this.configHistory.length - 1] : null;
-      const checkLenght = this.configHistory.length;
-      // console.log("checkLenght: ", checkLenght);
-      // Problem with undo
-      // It working BUT
-      // if there's 2 adjustment with different array for example
-      // 0 [] = [expo=0, temp=0] initial state
-      // 1 [] = [expo=1, temp=0]
-      // 2 [] = [expo=1, temp=2]
-      // Hit undo
-      // array 2 is push into redo and array 1 is pop into undo
-      // resulting
-      // 0 [] = [expo=0, temp=0] initial state
-      // 1 [] = [expo=1, temp=0]
-      // and for the second undo still showing the same result of array
-      // untill the third undo is hit
-      // going back to the initial state
+
       if(newConfig){
         this.redoStack.push(newConfig);
         if (undoConfig) {
@@ -2260,20 +2241,15 @@ export class HonchoEditorClass implements HonchoEditor {
           this.saturationValue = undoConfig.Saturation;
           this.vibranceValue = undoConfig.Vibrance;  
         }
-        
-        // console.log("this is inside redo: ", this.redoStack);
-        console.log("this is inside undo: ", undoConfig);
-        console.log("inside configHistory: ", this.configHistory);
+        // console.log("this is inside undo: ", undoConfig);
+        // console.log("inside configHistory: ", this.configHistory);
       }
     } 
-    // console.log("after pop: ", this.redoStack);
-    // console.log(this.contrastValue);
   }
 
   async redo(): Promise<void> {
     if (this.configHistory.length >= 0) {
       const redoConfig = this.redoStack.pop();
-      // console.log('this is inside redo: ', redoConfig);
       const nowConfig = this.redoStack.length >= 0 ? this.redoStack[this.redoStack.length - 1] : null;
       if (redoConfig) {
         this.configHistory.push(redoConfig);
