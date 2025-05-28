@@ -1,7 +1,8 @@
 import React from "react";
 import { HonchoEditor, Config, Listener } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
-import { useState } from "react";
+import { useState, MouseEvent } from "react";
+import { debounce } from "lodash";
 
 // Hook to manage and setup OpenCV
 export function useOpenCV() {
@@ -42,14 +43,13 @@ export function useOpenCV() {
 export class HonchoEditorClass implements HonchoEditor {
   private imgElement: HTMLImageElement;
   private canvasElement: HTMLCanvasElement;
-  private configHistory: Config[] = [];
   private currentConfigIndex: number = -1;
   private listener: Listener | null = null;
   // -- variable for adjustment
   private exposureValue: number = 0;
   private temperatureValue: number = 0;
   private tintValue: number = 0;
-  private highglightsValue: number = 0;
+  private highlightValue: number = 0;
   private shadowValue: number = 0;
     // -- variable for adjustment not yet implemented
   private blackValue: number = 0;
@@ -58,6 +58,9 @@ export class HonchoEditorClass implements HonchoEditor {
   private contrastValue: number = 0;
   private saturationValue: number = 0;
   private vibranceValue: number = 0;
+  // -- config for history
+  public configHistory: Config[] = [];
+  public redoStack: Config[] = [];
 
   
 
@@ -71,9 +74,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   consume(serverConfig: Config[]): string {
-    // this.config HISTORY = serverConfig;
-    // this.currentConfigIndex = serverConfig.length - 1;
-    // this.applyOpenCV(this.getFlattenConfig(serverConfig));
+    
     return "Configs consumed";
   }
 
@@ -148,6 +149,9 @@ export class HonchoEditorClass implements HonchoEditor {
     finalHsvChannels.delete();
     mergedHsv.delete();
 
+    // debugging for config value
+    // console.log("Exposure From Config: ", this.exposureValue);
+    // console.log("Exposure Value: ", exposure);
     return finalHSV;
   }
 
@@ -470,6 +474,7 @@ export class HonchoEditorClass implements HonchoEditor {
   
   // -- Implement adjustment Termperature
   async modify_image_temperature(colorTemperature: number, inputImage: cv.Mat): Promise<cv.Mat> {
+    this.temperatureValue = colorTemperature;
     const labImage = new cv.Mat();
     const originalMat = inputImage.clone();
   
@@ -494,9 +499,9 @@ export class HonchoEditorClass implements HonchoEditor {
     cv.subtract(dummyOnes, lumNorm, lumSub);
     const lumScalingFactor = this.sigmoid(lumSub, 5.0, 0.5);
   
-    const adjustedMat = colorTemperature >= 0
-      ? await this.boostWarmTemperature(colorTemperature, originalMat, lumScalingFactor)
-      : await this.boostCoolTemperature(colorTemperature, originalMat, lumScalingFactor);
+    const adjustedMat = this.temperatureValue >= 0
+      ? await this.boostWarmTemperature(this.temperatureValue, originalMat, lumScalingFactor)
+      : await this.boostCoolTemperature(this.temperatureValue, originalMat, lumScalingFactor);
   
     // Convert for display
     cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2RGB);
@@ -771,9 +776,10 @@ export class HonchoEditorClass implements HonchoEditor {
 
   // -- Implement adjustment Tint
   async modify_image_tint(tint: number, inputImage: cv.Mat): Promise<cv.Mat> {
+    this.tintValue = tint;
     const labImage = new cv.Mat();
     const originalMat = inputImage.clone();
-    tint = tint / 10;
+    tint = this.tintValue / 10;
     cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
     cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
 
@@ -857,17 +863,19 @@ export class HonchoEditorClass implements HonchoEditor {
   }
   
   // -- Implement adjustment Highlights
-  async modify_image_highlights(highlightsScore: number, inputImage: cv.Mat): Promise<cv.Mat> {
+  async modify_image_highlights(highlight: number, inputImage: cv.Mat): Promise<cv.Mat> {
     try {
       const src = inputImage.clone();
       if (!src || src.empty()) {
         throw new Error("Input image is empty");
       }
 
+      this.highlightValue = highlight;
+
       const originalImage = new cv.Mat();
       cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
 
-      const highlightFactor = highlightsScore / 100;
+      const highlightFactor = this.highlightValue / 100;
 
       const hsvImage = new cv.Mat();
       cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
@@ -927,7 +935,8 @@ export class HonchoEditorClass implements HonchoEditor {
       cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
 
       // Map shadows (0 to 100) to a darkening factor (1 to 0)
-      const shadowFactor = 1 - (shadows / -100); // 1 (no change) to 0 (max darkening)
+      this.shadowValue = shadows;
+      const shadowFactor = 1 - (this.shadowValue / -100); // 1 (no change) to 0 (max darkening)
 
       const hsvImage = new cv.Mat();
       cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
@@ -968,8 +977,65 @@ export class HonchoEditorClass implements HonchoEditor {
 
   // -- Implement adjustment Blacks
   async modify_image_blacks(blacks: number, inputImage: cv.Mat): Promise<cv.Mat> {
-    // Implement based on Kotlin's modifyImageBlacks
-    return inputImage.clone();
+    try {
+      const src = inputImage.clone();
+      if (!src || src.empty()) {
+        throw new Error("Input image is empty");
+      }
+      this.blackValue = blacks;
+
+      const originalImage = new cv.Mat();
+      cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
+
+      const blackFactor = this.blackValue / 100;
+
+      const hsvImage = new cv.Mat();
+      cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsvImage, channels);
+      const hue = channels.get(0);
+      const saturation = channels.get(1);
+      const value = channels.get(2);
+
+      const scaledValue = new cv.Mat();
+      let contrastFactor = 0;
+      if (blackFactor >= 0) {
+        cv.convertScaleAbs(value, scaledValue, 1 - blackFactor * 0.5, -blackFactor * 10);
+      } else {
+        contrastFactor = 0.1 * (1 - Math.exp(-Math.abs(blackFactor) / 0.4));
+        cv.convertScaleAbs(value, scaledValue, 1 + contrastFactor, blackFactor * 15);
+      }
+
+      channels.set(2, scaledValue);
+
+      cv.merge(channels, hsvImage);
+
+      let adjustedImage = new cv.Mat();
+      cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+
+      // if (blackFactor >= 0 && typeof cv.GaussianBlur === 'function') {
+      //   const blurredImage = new cv.Mat();
+      //   cv.GaussianBlur(adjustedImage, blurredImage, { width: 3, height: 3 }, 0);
+      //   adjustedImage.delete();
+      //   adjustedImage = blurredImage;
+      // }
+
+      const finalImage = new cv.Mat();
+      cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+
+      src.delete();
+      originalImage.delete();
+      hsvImage.delete();
+      channels.delete();
+      scaledValue.delete();
+      adjustedImage.delete();
+
+      return finalImage;
+    } catch (error) {
+      console.error("Error in modify_image_blacks:", error);
+      throw error;
+    }
   }
 
   // -- Scaling for white
@@ -1418,123 +1484,6 @@ export class HonchoEditorClass implements HonchoEditor {
     }
   }
 
-  // -- Coloring for saturation when it's not black and white
-  private hueShiftedProcess(imageToProcess: cv.Mat): cv.Mat {
-    try {
-      const hsvImage = new cv.Mat();
-      cv.cvtColor(imageToProcess, hsvImage, cv.COLOR_BGR2HSV);
-
-      const channels = new cv.MatVector();
-      cv.split(hsvImage, channels);
-      const h = channels.get(0);
-      const s = channels.get(1);
-      const v = channels.get(2);
-
-      const redMask = new cv.Mat(h.rows, h.cols, cv.CV_32F);
-      const mask1 = new cv.Mat();
-      const mask2 = new cv.Mat();
-      cv.threshold(h, mask1, 10, 1, cv.THRESH_BINARY_INV);
-      cv.threshold(h, mask2, 170, 1, cv.THRESH_BINARY);
-      cv.addWeighted(mask1, 1, mask2, 1, 0, redMask);
-      cv.GaussianBlur(redMask, redMask, { width: 11, height: 11 }, 0);
-
-      const hShifted = new cv.Mat();
-      cv.convertScaleAbs(h, hShifted, 1, redMask.data[0] * -5);
-      cv.threshold(hShifted, hShifted, 179, 179, cv.THRESH_TRUNC);
-
-      const hsvShifted = new cv.Mat();
-      const mergeChannels = new cv.MatVector();
-      mergeChannels.push_back(hShifted);
-      mergeChannels.push_back(s);
-      mergeChannels.push_back(v);
-      cv.merge(mergeChannels, hsvShifted);
-
-      const bgrResult = new cv.Mat();
-      cv.cvtColor(hsvShifted, bgrResult, cv.COLOR_HSV2BGR);
-
-      hsvImage.delete();
-      channels.delete();
-      redMask.delete();
-      mask1.delete();
-      mask2.delete();
-      hShifted.delete();
-      hsvShifted.delete();
-      mergeChannels.delete();
-
-      return bgrResult;
-    } catch (error) {
-      console.error("Hue shift processing failed:", error);
-      return imageToProcess;
-    }
-  }
-
-  // -- Implement from for saturation
-  async modify_image_saturation(saturation: number, inputImage: cv.Mat): Promise<cv.Mat> {
-    try {
-      const src = inputImage.clone();
-      if (!src || src.empty()) {
-        throw new Error("Input image is empty");
-      }
-
-      const originalImage = new cv.Mat();
-      cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
-
-      const labImage = new cv.Mat();
-      cv.cvtColor(originalImage, labImage, cv.COLOR_BGR2Lab);
-
-      const labChannels = new cv.MatVector();
-      cv.split(labImage, labChannels);
-      const lum = labChannels.get(0);
-      const oriA = labChannels.get(1);
-      const oriB = labChannels.get(2);
-
-      const satRatio = 1 + saturation / 100.0;
-      const aTemp = new cv.Mat();
-      const bTemp = new cv.Mat();
-      cv.convertScaleAbs(oriA, aTemp, satRatio, (1 - satRatio) * 128);
-      cv.convertScaleAbs(oriB, bTemp, satRatio, (1 - satRatio) * 128);
-
-      cv.threshold(aTemp, aTemp, 255, 255, cv.THRESH_TRUNC);
-      cv.threshold(aTemp, aTemp, 0, 0, cv.THRESH_TOZERO);
-      cv.threshold(bTemp, bTemp, 255, 255, cv.THRESH_TRUNC);
-      cv.threshold(bTemp, bTemp, 0, 0, cv.THRESH_TOZERO);
-
-      const labAdjusted = new cv.Mat();
-      const mergeChannels = new cv.MatVector();
-      mergeChannels.push_back(lum);
-      mergeChannels.push_back(aTemp);
-      mergeChannels.push_back(bTemp);
-      cv.merge(mergeChannels, labAdjusted);
-
-      let adjustedImage = new cv.Mat();
-      cv.cvtColor(labAdjusted, adjustedImage, cv.COLOR_Lab2BGR);
-
-      if (saturation < 0) {
-        const hueShiftedImage = this.hueShiftedProcess(adjustedImage);
-        adjustedImage.delete();
-        adjustedImage = hueShiftedImage;
-      }
-
-      const finalImage = new cv.Mat();
-      cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
-
-      src.delete();
-      originalImage.delete();
-      labImage.delete();
-      labChannels.delete();
-      aTemp.delete();
-      bTemp.delete();
-      labAdjusted.delete();
-      mergeChannels.delete();
-      adjustedImage.delete();
-
-      return finalImage;
-    } catch (error) {
-      console.error("Error in modify_image_saturation:", error);
-      throw error;
-    }
-  }
-
   // -- For Midtones Contrast
   private interpMatAllMat(x: cv.Mat, xp: cv.Mat, fp: cv.Mat): cv.Mat {
     const xSize = x.total();
@@ -1793,13 +1742,14 @@ export class HonchoEditorClass implements HonchoEditor {
   async modify_image_contrast(contrastScore: number, inputImage: cv.Mat): Promise<cv.Mat> {
     const imageToProcess = inputImage.clone();
     cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
-    contrastScore = contrastScore / 10;
+    this.contrastValue = contrastScore
+    const contrastFactor = contrastScore / 10;
 
-    if (contrastScore >= 0) {
+    if (contrastFactor >= 0) {
       const lowVal = 4.0;
       const highVal = 9.0;
       const midpoint = 0.5;
-      const contrastScale = lowVal + (highVal - lowVal) / (1 + Math.exp(-0.3 * (contrastScore - 1)));
+      const contrastScale = lowVal + (highVal - lowVal) / (1 + Math.exp(-0.3 * (contrastFactor - 1)));
 
       const normalizeImg = imageToProcess.clone();
       normalizeImg.convertTo(normalizeImg, cv.CV_32F);
@@ -1823,7 +1773,7 @@ export class HonchoEditorClass implements HonchoEditor {
       const labChannels = new cv.MatVector();
       cv.split(labImg, labChannels);
 
-      const adjustedContrastScore = contrastScore / 100;
+      const adjustedContrastScore = contrastFactor / 100;
       const lum = labChannels.get(0).clone();
       const oriA = labChannels.get(1).clone();
       const fScore = 131.0 * (adjustedContrastScore + 127) / (127 * (131 - adjustedContrastScore));
@@ -1837,7 +1787,7 @@ export class HonchoEditorClass implements HonchoEditor {
       cv.addWeighted(floatMat, alphaC, floatMat, 0.0, gammaC, resultMat);
       resultMat.convertTo(resultMat, cv.CV_8U);
 
-      const boostScore = 60 * Math.pow(Math.abs(contrastScore) / 10.0, 1.5);
+      const boostScore = 60 * Math.pow(Math.abs(contrastFactor) / 10.0, 1.5);
       const afterMidtonesAdj = await this.applyMidtonesContrast(resultMat, boostScore);
       const afterRedBoostAdj = await this.boostRedContrast(afterMidtonesAdj, lum, oriA);
 
@@ -1854,33 +1804,164 @@ export class HonchoEditorClass implements HonchoEditor {
     }
   }
 
+  // -- Coloring for saturation when it's not black and white
+  private hueShiftedProcess(imageToProcess: cv.Mat): cv.Mat {
+    try {
+      const hsvImage = new cv.Mat();
+      cv.cvtColor(imageToProcess, hsvImage, cv.COLOR_BGR2HSV);
+
+      const channels = new cv.MatVector();
+      cv.split(hsvImage, channels);
+      const h = channels.get(0);
+      const s = channels.get(1);
+      const v = channels.get(2);
+
+      const redMask = new cv.Mat(h.rows, h.cols, cv.CV_32F);
+      const mask1 = new cv.Mat();
+      const mask2 = new cv.Mat();
+      cv.threshold(h, mask1, 10, 1, cv.THRESH_BINARY_INV);
+      cv.threshold(h, mask2, 170, 1, cv.THRESH_BINARY);
+      cv.addWeighted(mask1, 1, mask2, 1, 0, redMask);
+      cv.GaussianBlur(redMask, redMask, { width: 11, height: 11 }, 0);
+
+      const hShifted = new cv.Mat();
+      cv.convertScaleAbs(h, hShifted, 1, redMask.data[0] * -5);
+      cv.threshold(hShifted, hShifted, 179, 179, cv.THRESH_TRUNC);
+
+      const hsvShifted = new cv.Mat();
+      const mergeChannels = new cv.MatVector();
+      mergeChannels.push_back(hShifted);
+      mergeChannels.push_back(s);
+      mergeChannels.push_back(v);
+      cv.merge(mergeChannels, hsvShifted);
+
+      const bgrResult = new cv.Mat();
+      cv.cvtColor(hsvShifted, bgrResult, cv.COLOR_HSV2BGR);
+
+      hsvImage.delete();
+      channels.delete();
+      redMask.delete();
+      mask1.delete();
+      mask2.delete();
+      hShifted.delete();
+      hsvShifted.delete();
+      mergeChannels.delete();
+
+      return bgrResult;
+    } catch (error) {
+      console.error("Hue shift processing failed:", error);
+      return imageToProcess;
+    }
+  }
+
+  // -- Implement from for saturation
+  async modify_image_saturation(saturation: number, inputImage: cv.Mat): Promise<cv.Mat> {
+    try {
+      const src = inputImage.clone();
+      if (!src || src.empty()) {
+        throw new Error("Input image is empty");
+      }
+
+      this.saturationValue = saturation;
+
+      const originalImage = new cv.Mat();
+      cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
+
+      const labImage = new cv.Mat();
+      cv.cvtColor(originalImage, labImage, cv.COLOR_BGR2Lab);
+
+      const labChannels = new cv.MatVector();
+      cv.split(labImage, labChannels);
+      const lum = labChannels.get(0);
+      const oriA = labChannels.get(1);
+      const oriB = labChannels.get(2);
+
+      const satRatio = 1 + this.saturationValue / 100.0;
+      const aTemp = new cv.Mat();
+      const bTemp = new cv.Mat();
+      cv.convertScaleAbs(oriA, aTemp, satRatio, (1 - satRatio) * 128);
+      cv.convertScaleAbs(oriB, bTemp, satRatio, (1 - satRatio) * 128);
+
+      cv.threshold(aTemp, aTemp, 255, 255, cv.THRESH_TRUNC);
+      cv.threshold(aTemp, aTemp, 0, 0, cv.THRESH_TOZERO);
+      cv.threshold(bTemp, bTemp, 255, 255, cv.THRESH_TRUNC);
+      cv.threshold(bTemp, bTemp, 0, 0, cv.THRESH_TOZERO);
+
+      const labAdjusted = new cv.Mat();
+      const mergeChannels = new cv.MatVector();
+      mergeChannels.push_back(lum);
+      mergeChannels.push_back(aTemp);
+      mergeChannels.push_back(bTemp);
+      cv.merge(mergeChannels, labAdjusted);
+
+      let adjustedImage = new cv.Mat();
+      cv.cvtColor(labAdjusted, adjustedImage, cv.COLOR_Lab2BGR);
+
+      if (saturation < 0) {
+        const hueShiftedImage = this.hueShiftedProcess(adjustedImage);
+        adjustedImage.delete();
+        adjustedImage = hueShiftedImage;
+      }
+
+      const finalImage = new cv.Mat();
+      cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+
+      src.delete();
+      originalImage.delete();
+      labImage.delete();
+      labChannels.delete();
+      aTemp.delete();
+      bTemp.delete();
+      labAdjusted.delete();
+      mergeChannels.delete();
+      adjustedImage.delete();
+
+      return finalImage;
+    } catch (error) {
+      console.error("Error in modify_image_saturation:", error);
+      throw error;
+    }
+  }
+
   private boostRedVibrance(aChannel: cv.Mat, oriA: cv.Mat, saturationFactor: number): cv.Mat {
-      try {
-        // Create red mask based on a channel
+    try {
+        // Validate inputs
+        if (aChannel.empty() || oriA.empty()) {
+            throw new Error("Input matrices are empty");
+        }
+        if (aChannel.type() !== oriA.type()) {
+            throw new Error("Type mismatch between aChannel and oriA");
+        }
+
+        // Convert aChannel to CV_32F
+        const aChannel32F = new cv.Mat();
+        aChannel.convertTo(aChannel32F, cv.CV_32F);
+
+        // Create red mask based on oriA
         const redMask = new cv.Mat();
         cv.convertScaleAbs(oriA, redMask, 1 / 40.0, -128 / 40.0); // Map a to [0, 1] for red areas
-        cv.threshold(redMask, redMask, 1, 1, cv.THRESH_TRUNC);
-        cv.threshold(redMask, redMask, 0, 0, cv.THRESH_TOZERO);
+        cv.threshold(redMask, redMask, 0.5, 1, cv.THRESH_BINARY); // Simplified binary threshold
+        redMask.convertTo(redMask, cv.CV_32F);
 
         // Scale mask by vibrance factor
         const maskScale = cv.Mat.ones(redMask.size(), cv.CV_32F);
-        maskScale.setTo(cv.Scalar.all(saturationFactor * 0.5)); // Moderate red boost
+        maskScale.setTo(cv.Scalar.all(saturationFactor * 0.5));
         cv.multiply(redMask, maskScale, redMask);
-        redMask.convertTo(redMask, cv.CV_32F);
 
-        // Boost a channel in red areas: a' = a + redMask * redScale * saturationFactor
-        const redScale = cv.Mat.ones(aChannel.size(), cv.CV_32F);
-        redScale.setTo(cv.Scalar.all(20.0 * saturationFactor)); // Adjust red boost strength
+        // Boost a channel in red areas
+        const redScale = cv.Mat.ones(aChannel32F.size(), cv.CV_32F);
+        redScale.setTo(cv.Scalar.all(20.0 * saturationFactor));
         const aBoost = new cv.Mat();
         cv.multiply(redMask, redScale, aBoost);
         const aAdjusted = new cv.Mat();
-        cv.add(aChannel, aBoost, aAdjusted);
+        cv.add(aChannel32F, aBoost, aAdjusted);
 
         // Clean up
         redMask.delete();
         maskScale.delete();
         redScale.delete();
         aBoost.delete();
+        aChannel32F.delete();
 
         return aAdjusted;
     } catch (error) {
@@ -1897,6 +1978,7 @@ export class HonchoEditorClass implements HonchoEditor {
         if (!src || src.empty()) {
             throw new Error("Input image is empty");
         }
+        this.vibranceValue = vibrance;
 
         // Convert to BGR and then to Lab
         const originalImage = new cv.Mat();
@@ -1913,13 +1995,16 @@ export class HonchoEditorClass implements HonchoEditor {
         const oriB = labChannels.get(2); // b channel (blue-yellow)
 
         // Calculate vibrance factor (0 to 1 for vibrance 0 to 100)
-        const saturationFactor = vibrance / 100.0;
+        const saturationFactor = this.vibranceValue / 100.0;
 
         // Adjust a and b channels for general vibrance
         const aTemp = new cv.Mat();
         const bTemp = new cv.Mat();
         oriA.convertTo(aTemp, cv.CV_32F);
         oriB.convertTo(bTemp, cv.CV_32F);
+
+        const oriA32F = new cv.Mat();
+        oriA.convertTo(oriA32F, cv.CV_32F);
 
         const neutralMat = cv.Mat.ones(aTemp.size(), cv.CV_32F);
         neutralMat.setTo(cv.Scalar.all(128.0)); // Neutral point for a and b
@@ -1941,7 +2026,7 @@ export class HonchoEditorClass implements HonchoEditor {
         // Apply red vibrance boost if vibrance > 0
         let finalA = aTemp;
         if (vibrance > 0) {
-            finalA = this.boostRedVibrance(aTemp, oriA, saturationFactor);
+            finalA = this.boostRedVibrance(aTemp, oriA32F, saturationFactor);
         }
 
         // Convert channels to CV_8U and clamp
@@ -1985,6 +2070,7 @@ export class HonchoEditorClass implements HonchoEditor {
         labAdjusted.delete();
         mergeChannels.delete();
         adjustedImage.delete();
+        oriA32F.delete();
         if (vibrance > 0 && finalA !== aTemp) {
             finalA.delete();
         }
@@ -2002,74 +2088,224 @@ export class HonchoEditorClass implements HonchoEditor {
     temperature: number,
     tint: number,
     highlights: number,
-    shadows: number,
-    blacks: number,
-    whites: number,
+    shadow: number,
+    black: number,
+    white: number,
     contrast: number,
     saturation: number,
-    vibrance: number
+    vibrance: number,
+    inputImage: HTMLImageElement,
+    canvasRef: HTMLCanvasElement
   ): Promise<void> {
-    const config: Config = {
-      Exposure: exposure,
-      Temp: temperature,
-      Tint: tint,
-      Highlights: highlights,
-      Shadow: shadows,
-      Black: blacks,
-      Whites: whites,
-      Contrast: contrast,
-      Saturation: saturation,
-      Vibrance: vibrance,
-    };
-  }
 
-  // Set and Apply for config
-  // setShadow(shadow: number): void {
-  //   this.currentConfig.Shadow = shadow;
-  // }
+    if (!inputImage || !canvasRef) {
+      throw new Error("Image or canvas not available");
+    }
 
-  // setTemp(temp: number): void {
-  //   this.currentConfig.Temp = temp;
-  // }
+    try {
+      let src = cv.imread(inputImage);
+      if (!src || src.empty()) {
+        throw new Error("Failed to read image from imageRef");
+      }
+      let currentImage = src;
+      // let currentImage16S = new Int16Array(currentImage.data);
+      // let dataExpo;
+      // let dataTemp;
+      // let dataTint;
+      // let dataHigh;
+      // let dataShadow;
+      // let dataBlack;
+      // let dataWhite;
+      // let dataContrast;
+      // let dataSaturation;
+      // let dataVibrance;
+      
+      if (exposure !== 0) {
+        this.exposureValue = exposure;
+        currentImage = (await this.modify_image_exposure(this.exposureValue, currentImage));
+      }
 
-  // setTint(tint: number): void {
-  //   this.currentConfig.Tint = tint;
-  // }
+      if (temperature !== 0) {
+        this.temperatureValue = temperature;
+        currentImage = (await this.modify_image_temperature(this.temperatureValue, currentImage));
+      }
 
-  // applyShadow(shadow: number): void {
-  //   this.setShadow(shadow);
-  //   this.applyOpenCV(this.currentConfig);
-  // }
+      if (tint !== 0) {
+        this.tintValue = tint;
+        currentImage = (await this.modify_image_tint(this.tintValue, currentImage));
+      }
 
-  // applyTemp(temp: number): void {
-  //   this.setTemp(temp);
-  //   this.applyOpenCV(this.currentConfig);
-  // }
+      if (highlights !== 0) {
+        this.highlightValue = highlights;
+        currentImage = (await this.modify_image_highlights(this.highlightValue, currentImage));
+      }
 
-  // applyTint(tint: number): void {
-  //   this.setTint(tint);
-  //   this.applyOpenCV(this.currentConfig);
-  // }
+      if (shadow !== 0) {
+        this.shadowValue = shadow;
+        currentImage = (await this.modify_image_shadows(this.shadowValue, currentImage));
+      }
 
-  async undo(): Promise<void> {
-    if (this.currentConfigIndex > 0) {
-      this.currentConfigIndex--;
-      await this.applyOpenCV(this.configHistory[this.currentConfigIndex]);
+      if (black !== 0) {
+        this.blackValue = black;
+        currentImage = (await this.modify_image_blacks(this.blackValue, currentImage));
+      }
+
+      if (white !== 0) {
+        this.whiteValue = white;
+        currentImage = (await this.modify_image_whites(this.whiteValue, currentImage));
+      }
+
+      if (contrast !== 0) {
+        this.contrastValue = contrast;
+        currentImage = (await this.modify_image_contrast(this.contrastValue, currentImage));
+      }
+
+      if (saturation !== 0) {
+        this.saturationValue = saturation;
+        currentImage = (await this.modify_image_saturation(this.saturationValue, currentImage));
+      }
+
+      if (vibrance !== 0) {
+        this.vibranceValue = vibrance;
+        currentImage = (await this.modify_image_vibrance(this.vibranceValue, currentImage));
+      }
+
+      // let deltaExposure = dataExpo - currentImage16S;
+      
+      // IT SMELL LIKE A FIX YEE!!!!
+
+      // const debouncer = (ms: number) => new Promise(res => setTimeout(res, ms));
+      
+      // await debouncer(1000);
+      // inital state to saved in configHistory
+      if (this.configHistory.length == 0) {
+        this.configHistory.push({
+          Exposure: this.exposureValue,
+          Temperature: this.temperatureValue,
+          Shadow: this.shadowValue,
+          Highlights: this.highlightValue,
+          Tint: this.tintValue,
+          Black: this.blackValue,
+          White: this.whiteValue,
+          Contrast: this.contrastValue,
+          Saturation: this.saturationValue,
+          Vibrance: this.vibranceValue
+        });
+        console.log("first push: ",this.configHistory);
+      }
+      
+      cv.imshow(canvasRef, currentImage);
+
+    } catch (error) {
+      console.error("Error in modify_image_colors:", error);
+      throw error;
     }
   }
 
+  configHistotrypush() {
+    // Here is to save configHistory after initial state
+    if (this.configHistory.length > 0) {
+      this.configHistory.push({
+        Exposure: this.exposureValue,
+        Temperature: this.temperatureValue,
+        Shadow: this.shadowValue,
+        Highlights: this.highlightValue,
+        Tint: this.tintValue,
+        Black: this.blackValue,
+        White: this.whiteValue,
+        Contrast: this.contrastValue,
+        Saturation: this.saturationValue,
+        Vibrance: this.vibranceValue
+      });
+      console.log("After length > 0: ",this.configHistory);
+    }
+  }
+  // Logic for undo
+  // for now having a issues where i'm using my previous code undo it can only go back 1 time
+  /// for example = 
+  // 1. expo = 0 (initial state), {user slide value} expo = 4
+  // initial state is save into configHistory.
+  async undo(): Promise<void> {
+    if (this.redoStack.length >= 0) {
+      const newConfig = this.configHistory.pop();
+      // this.configHistory.pop();
+      const undoConfig = this.configHistory.length > 0 ? this.configHistory[this.configHistory.length - 1] : null;
+      const checkLenght = this.configHistory.length;
+      // console.log("checkLenght: ", checkLenght);
+      // Problem with undo
+      // It working BUT
+      // if there's 2 adjustment with different array for example
+      // 0 [] = [expo=0, temp=0] initial state
+      // 1 [] = [expo=1, temp=0]
+      // 2 [] = [expo=1, temp=2]
+      // Hit undo
+      // array 2 is push into redo and array 1 is pop into undo
+      // resulting
+      // 0 [] = [expo=0, temp=0] initial state
+      // 1 [] = [expo=1, temp=0]
+      // and for the second undo still showing the same result of array
+      // untill the third undo is hit
+      // going back to the initial state
+      if(newConfig){
+        this.redoStack.push(newConfig);
+        if (undoConfig) {
+          this.exposureValue = undoConfig.Exposure;
+          this.temperatureValue = undoConfig.Temperature;
+          this.tintValue = undoConfig.Tint;
+          this.highlightValue = undoConfig.Highlights;
+          this.shadowValue = undoConfig.Shadow;
+          this.blackValue = undoConfig.Black;
+          this.whiteValue = undoConfig.White;
+          this.contrastValue = undoConfig.Contrast;
+          this.saturationValue = undoConfig.Saturation;
+          this.vibranceValue = undoConfig.Vibrance;  
+        }
+        
+        // console.log("this is inside redo: ", this.redoStack);
+        console.log("this is inside undo: ", undoConfig);
+        console.log("inside configHistory: ", this.configHistory);
+      }
+    } 
+    // console.log("after pop: ", this.redoStack);
+    // console.log(this.contrastValue);
+  }
+
   async redo(): Promise<void> {
-    if (this.currentConfigIndex < this.configHistory.length - 1) {
-      this.currentConfigIndex++;
-      await this.applyOpenCV(this.configHistory[this.currentConfigIndex]);
+    if (this.configHistory.length >= 0) {
+      const redoConfig = this.redoStack.pop();
+      // console.log('this is inside redo: ', redoConfig);
+      const nowConfig = this.redoStack.length >= 0 ? this.redoStack[this.redoStack.length - 1] : null;
+      if (redoConfig) {
+        this.configHistory.push(redoConfig);
+        this.exposureValue = redoConfig.Exposure;
+        this.temperatureValue = redoConfig.Temperature;
+        this.tintValue = redoConfig.Tint;
+        this.highlightValue = redoConfig.Highlights;
+        this.shadowValue = redoConfig.Shadow;
+        this.blackValue = redoConfig.Black;
+        this.whiteValue = redoConfig.White;
+        this.contrastValue = redoConfig.Contrast;
+        this.saturationValue = redoConfig.Saturation;
+        this.vibranceValue = redoConfig.Vibrance;
+      }
     }
   }
 
   reset(): void {
-    this.configHistory = [];
-    this.currentConfigIndex = -1;
     const mat = cv.imread(this.imgElement);
-    // this.renderToCanvas(mat);
+    this.configHistory = [];
+    this.redoStack = [];
+    this.exposureValue = 0;
+    this.temperatureValue = 0;
+    this.tintValue = 0;
+    this.highlightValue = 0;
+    this.shadowValue = 0;
+    this.blackValue = 0;
+    this.whiteValue = 0;
+    this.contrastValue = 0;
+    this.saturationValue = 0;
+    this.vibranceValue = 0;
+
     mat.delete();
   }
 
@@ -2079,33 +2315,11 @@ export class HonchoEditorClass implements HonchoEditor {
     }
   }
 
-  getFlattenConfig(configs: Config[]): Config {
-    return configs.reduce((acc, curr) => ({
-      Exposure: acc.Exposure + curr.Exposure,
-      Temp: acc.Temp + curr.Temp,
-      Shadow: acc.Shadow + curr.Shadow,
-      Highlights: acc.Highlights + curr.Highlights,
-      Tint: acc.Tint + curr.Tint,
-      Black: acc.Black + curr.Black,
-      Whites: acc.Whites + curr.Whites,
-      Contrast: acc.Contrast + curr.Contrast,
-      Saturation: acc.Saturation + curr.Saturation,
-      Vibrance: acc.Vibrance + curr.Vibrance,
-    }), {
-      Exposure: 0,
-      Temp: 0,
-      Shadow: 0,
-      Highlights: 0,
-      Tint: 0,
-      Black: 0,
-      Whites: 0,
-      Contrast: 0,
-      Saturation: 0,
-      Vibrance: 0,
-    });
+  getFlattenConfig(configs: Config): Config {
+    return configs;
   }
 
-  async applyOpenCV(config: Config): Promise<void> {
+  applyOpenCV(config: Config): void {
     return ;
   }
 }

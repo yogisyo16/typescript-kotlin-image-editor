@@ -22,6 +22,7 @@ export default function Home() {
   const [saturationScore, setSaturationScore] = useState(0);
   const [vibranceScore, setVibranceScore] = useState(0);
 
+  const historyOn = [];
   const onOpenCVLoad = () => {
     setIsCvLoaded(true);
   };
@@ -54,6 +55,67 @@ export default function Home() {
   }, [isCvLoaded, imageLoaded]);
 
   // Apply adjustments when sliders change
+  // useEffect(() => {
+  //   if (
+  //     editorRef.current &&
+  //     isCvLoaded &&
+  //     imageLoaded &&
+  //     imgRef.current &&
+  //     canvasRef.current
+  //   ) {
+  //     const applyAdjustments = async () => {
+  //       let mat = cv.imread(imgRef.current!);
+        
+  //       if (exposureScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_exposure(exposureScore, mat);
+  //       }
+  //       if (temperatureScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_temperature(temperatureScore, mat);
+  //       }
+  //       if (tintScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_tint(tintScore, mat);
+  //       }
+  //       if (highlightsScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_highlights(highlightsScore, mat);
+  //       }
+  //       if (shadowsScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_shadows(shadowsScore, mat);
+  //       }
+  //       if (blackScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_blacks(blackScore, mat);
+  //       }
+  //       if (whiteScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_whites(whiteScore, mat);
+  //       }
+  //       if (contrastScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_contrast(contrastScore, mat);
+  //       }
+  //       if (saturationScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_saturation(saturationScore, mat);
+  //       }
+  //       if (vibranceScore !== 0) {
+  //         mat = await editorRef.current!.modify_image_vibrance(vibranceScore, mat);
+  //       }
+  //       cv.imshow(canvasRef.current!, mat);
+  //       mat.delete();
+  //     };
+  //     applyAdjustments();
+  //   }
+  // }, [
+  //   exposureScore,
+  //   temperatureScore,
+  //   tintScore,
+  //   highlightsScore,
+  //   shadowsScore,
+  //   blackScore,
+  //   whiteScore,
+  //   contrastScore,
+  //   saturationScore,
+  //   vibranceScore,
+  //   isCvLoaded,
+  //   imageLoaded,
+  // ]);
+
   useEffect(() => {
     if (
       editorRef.current &&
@@ -62,42 +124,21 @@ export default function Home() {
       imgRef.current &&
       canvasRef.current
     ) {
-      const applyAdjustments = async () => {
-        let mat = cv.imread(imgRef.current!);
-        if (exposureScore !== 0) {
-          mat = await editorRef.current!.modify_image_exposure(exposureScore, mat);
-        }
-        if (temperatureScore !== 0) {
-          mat = await editorRef.current!.modify_image_temperature(temperatureScore, mat);
-        }
-        if (tintScore !== 0) {
-          mat = await editorRef.current!.modify_image_tint(tintScore, mat);
-        }
-        if (highlightsScore !== 0) {
-          mat = await editorRef.current!.modify_image_highlights(highlightsScore, mat);
-        }
-        if (shadowsScore !== 0) {
-          mat = await editorRef.current!.modify_image_shadows(shadowsScore, mat);
-        }
-        if (blackScore !== 0) {
-          mat = await editorRef.current!.modify_image_blacks(blackScore, mat);
-        }
-        if (whiteScore !== 0) {
-          mat = await editorRef.current!.modify_image_whites(whiteScore, mat);
-        }
-        if (contrastScore !== 0) {
-          mat = await editorRef.current!.modify_image_contrast(contrastScore, mat);
-        }
-        if (saturationScore !== 0) {
-          mat = await editorRef.current!.modify_image_saturation(saturationScore, mat);
-        }
-        if (vibranceScore !== 0) {
-          mat = await editorRef.current!.modify_image_vibrance(vibranceScore, mat);
-        }
-        cv.imshow(canvasRef.current!, mat);
-        mat.delete();
-      };
-      applyAdjustments();
+      // console.log("Adjusting image colors");
+      editorRef.current.adjust_image_colors_merge(
+        exposureScore,
+        temperatureScore,
+        tintScore,
+        highlightsScore,
+        shadowsScore,
+        blackScore,
+        whiteScore,
+        contrastScore,
+        saturationScore,
+        vibranceScore,
+        imgRef.current,
+        canvasRef.current
+      );
     }
   }, [
     exposureScore,
@@ -110,23 +151,31 @@ export default function Home() {
     contrastScore,
     saturationScore,
     vibranceScore,
+    imgRef,
+    canvasRef,
     isCvLoaded,
     imageLoaded,
   ]);
 
+  const saveHistory = () => {
+    if (editorRef.current) {
+      editorRef.current.configHistotrypush();
+    }
+  };
+
   const handleReset = () => {
     if (editorRef.current) {
       editorRef.current.reset();
-      setExposureScore(0);
-      setTemperatureScore(0);
-      setTintScore(0);
-      setHighlightsScore(0);
-      setShadowsScore(0);
-      setBlackScore(0);
-      setWhiteScore(0);
-      setContrastScore(0);
-      setVibranceScore(0);
-      setSaturationScore(0);
+      setExposureScore(editorRef.current["exposureValue"]);
+      setTemperatureScore(editorRef.current["temperatureValue"]);
+      setTintScore(editorRef.current["tintValue"]);
+      setHighlightsScore(editorRef.current["highlightValue"]);
+      setShadowsScore(editorRef.current["shadowValue"]);
+      setBlackScore(editorRef.current["blackValue"]);
+      setWhiteScore(editorRef.current["whiteValue"]);
+      setContrastScore(editorRef.current["contrastValue"]);
+      setVibranceScore(editorRef.current["vibranceValue"]);
+      setSaturationScore(editorRef.current["saturationValue"]);
     }
   };
 
@@ -134,6 +183,31 @@ export default function Home() {
     if(editorRef.current) {
       editorRef.current.undo();
       setExposureScore(editorRef.current["exposureValue"]);
+      setTemperatureScore(editorRef.current["temperatureValue"]);
+      setTintScore(editorRef.current["tintValue"]);
+      setHighlightsScore(editorRef.current["highlightValue"]);
+      setShadowsScore(editorRef.current["shadowValue"]);
+      setBlackScore(editorRef.current["blackValue"]);
+      setWhiteScore(editorRef.current["whiteValue"]);
+      setContrastScore(editorRef.current["contrastValue"]);
+      setVibranceScore(editorRef.current["vibranceValue"]);
+      setSaturationScore(editorRef.current["saturationValue"]);
+    }
+  }
+
+  const handleRedo = () => {
+    if (editorRef.current) {
+      editorRef.current.redo();
+      setExposureScore(editorRef.current["exposureValue"]);
+      setTemperatureScore(editorRef.current["temperatureValue"]);
+      setTintScore(editorRef.current["tintValue"]);
+      setHighlightsScore(editorRef.current["highlightValue"]);
+      setShadowsScore(editorRef.current["shadowValue"]);
+      setBlackScore(editorRef.current["blackValue"]);
+      setWhiteScore(editorRef.current["whiteValue"]);
+      setContrastScore(editorRef.current["contrastValue"]);
+      setVibranceScore(editorRef.current["vibranceValue"]);
+      setSaturationScore(editorRef.current["saturationValue"]);
     }
   }
 
@@ -172,6 +246,12 @@ export default function Home() {
                   >
                     Undo
                   </button>
+                  <button
+                    className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
+                    onClick={handleRedo}
+                  >
+                    Redo
+                  </button>
                 </div>
               </div>
               <div className="flex flex-col items-center">
@@ -185,6 +265,7 @@ export default function Home() {
                       step="0.1"
                       value={exposureScore}
                       onChange={(e) => setExposureScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -197,9 +278,8 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={temperatureScore}
-                      onChange={(e) =>
-                        setTemperatureScore(Number(e.target.value))
-                      }
+                      onChange={(e) => setTemperatureScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -213,6 +293,7 @@ export default function Home() {
                       step="1"
                       value={tintScore}
                       onChange={(e) => setTintScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -227,9 +308,8 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={highlightsScore}
-                      onChange={(e) =>
-                        setHighlightsScore(Number(e.target.value))
-                      }
+                      onChange={(e) => setHighlightsScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -243,6 +323,7 @@ export default function Home() {
                       step="1"
                       value={shadowsScore}
                       onChange={(e) => setShadowsScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -256,6 +337,7 @@ export default function Home() {
                       step="1"
                       value={blackScore}
                       onChange={(e) => setBlackScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -269,6 +351,7 @@ export default function Home() {
                       step="1"
                       value={whiteScore}
                       onChange={(e) => setWhiteScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -284,6 +367,7 @@ export default function Home() {
                       step="1"
                       value={contrastScore}
                       onChange={(e) => setContrastScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -296,9 +380,8 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={saturationScore}
-                      onChange={(e) =>
-                        setSaturationScore(Number(e.target.value))
-                      }
+                      onChange={(e) => setSaturationScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
@@ -312,12 +395,13 @@ export default function Home() {
                       step="1"
                       value={vibranceScore}
                       onChange={(e) => setVibranceScore(Number(e.target.value))}
+                      onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
               </div>
             </div>
-            <div className="flex flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-6">
               <div>
                 <h3 className="text-sm">Original</h3>
                 <img ref={imgRef} alt="Original" width={640} height={360} />

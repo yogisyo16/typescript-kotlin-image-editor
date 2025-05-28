@@ -2,12 +2,12 @@ import cv from "@techstark/opencv-js";
 export interface Config {
   // Declaration for adjustments
   Exposure: number; // For ServerConfig Exposure
-  Temp: number; // For ServerConfig Temperature
+  Temperature: number; // For ServerConfig Temperature
   Shadow: number; // For ServerConfig Shadow
   Highlights: number; // For ServerConfig Highlights
   Tint: number; // For ServerConfig Tint
   Black: number; // For ServerConfig Black
-  Whites: number; // For ServerConfig Whites
+  White: number; // For ServerConfig White
   Contrast: number; // For ServerConfig Contrast
   Saturation: number; // For ServerConfig Saturation
   Vibrance: number; // For ServerConfig Vibrance
@@ -38,9 +38,11 @@ export interface HonchoEditor {
     whites: number,
     contrast: number,
     saturation: number,
-    vibrance: number
+    vibrance: number,
+    inputImage: HTMLImageElement,
+    canvasRef: HTMLCanvasElement
   ): Promise<void>;
-  
+  configHistotrypush(config: Config): void;
   // // Config setter
   // setShadow(shadow: number): void;
   // setTemp(temp: number): void;
@@ -57,7 +59,7 @@ export interface HonchoEditor {
   // applyTint(tint: number): void;
   // sendConfigServer(): void;
   // getFlattenConfig(configs: Config[]): Config;
-  // applyOpenCV(config: Config): Promise<void>;
+  // applyOpenCV(config: Config): void;
 }
 
 export interface Listener {
