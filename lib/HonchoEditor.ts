@@ -15,6 +15,9 @@ export interface Config {
 
 export interface HonchoEditor {
   consume(serverConfig: Config[]): string;
+  // Image getter
+  onImageUpdate(inputImage: cv.Mat): cv.Mat;
+
   // Modify image function
   modify_image_exposure(exposure: number, inputImage: cv.Mat): Promise<cv.Mat>;
   modify_image_temperature(colorTemperature: number, inputImage: cv.Mat): Promise<cv.Mat>;

@@ -78,6 +78,10 @@ export class HonchoEditorClass implements HonchoEditor {
     return "Configs consumed";
   }
 
+  onImageUpdate(inputImage: cv.Mat): cv.Mat {
+    return inputImage;
+  }
+
   // -- From kotlin to use bitmap, is not used for web (SEMANGAT GES yang andro dan ios)
   // private async renderToCanvas(mat: cv.Mat): Promise<void> {
   //   cv.imshow(this.canvasElement, mat);
