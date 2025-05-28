@@ -2171,11 +2171,6 @@ export class HonchoEditorClass implements HonchoEditor {
       }
 
       // let deltaExposure = dataExpo - currentImage16S;
-
-      // Problem with this save into configHistory.
-      // Every user slider is saved into the configHistory.
-      // So for example user want to change from 0 to 5, but sliding it
-      // It will save all the step. (0, 1, 2, 3, 4, 5).
       
       // IT SMELL LIKE A FIX YEE!!!!
 
@@ -2208,6 +2203,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   configHistotrypush() {
+    // Here is to save configHistory after initial state
     if (this.configHistory.length > 0) {
       this.configHistory.push({
         Exposure: this.exposureValue,
