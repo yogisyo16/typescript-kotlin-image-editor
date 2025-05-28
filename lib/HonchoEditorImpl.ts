@@ -1924,32 +1924,44 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   private boostRedVibrance(aChannel: cv.Mat, oriA: cv.Mat, saturationFactor: number): cv.Mat {
-      try {
-        // Create red mask based on a channel
+    try {
+        // Validate inputs
+        if (aChannel.empty() || oriA.empty()) {
+            throw new Error("Input matrices are empty");
+        }
+        if (aChannel.type() !== oriA.type()) {
+            throw new Error("Type mismatch between aChannel and oriA");
+        }
+
+        // Convert aChannel to CV_32F
+        const aChannel32F = new cv.Mat();
+        aChannel.convertTo(aChannel32F, cv.CV_32F);
+
+        // Create red mask based on oriA
         const redMask = new cv.Mat();
         cv.convertScaleAbs(oriA, redMask, 1 / 40.0, -128 / 40.0); // Map a to [0, 1] for red areas
-        cv.threshold(redMask, redMask, 1, 1, cv.THRESH_TRUNC);
-        cv.threshold(redMask, redMask, 0, 0, cv.THRESH_TOZERO);
+        cv.threshold(redMask, redMask, 0.5, 1, cv.THRESH_BINARY); // Simplified binary threshold
+        redMask.convertTo(redMask, cv.CV_32F);
 
         // Scale mask by vibrance factor
         const maskScale = cv.Mat.ones(redMask.size(), cv.CV_32F);
-        maskScale.setTo(cv.Scalar.all(saturationFactor * 0.5)); // Moderate red boost
+        maskScale.setTo(cv.Scalar.all(saturationFactor * 0.5));
         cv.multiply(redMask, maskScale, redMask);
-        redMask.convertTo(redMask, cv.CV_32F);
 
-        // Boost a channel in red areas: a' = a + redMask * redScale * saturationFactor
-        const redScale = cv.Mat.ones(aChannel.size(), cv.CV_32F);
-        redScale.setTo(cv.Scalar.all(20.0 * saturationFactor)); // Adjust red boost strength
+        // Boost a channel in red areas
+        const redScale = cv.Mat.ones(aChannel32F.size(), cv.CV_32F);
+        redScale.setTo(cv.Scalar.all(20.0 * saturationFactor));
         const aBoost = new cv.Mat();
         cv.multiply(redMask, redScale, aBoost);
         const aAdjusted = new cv.Mat();
-        cv.add(aChannel, aBoost, aAdjusted);
+        cv.add(aChannel32F, aBoost, aAdjusted);
 
         // Clean up
         redMask.delete();
         maskScale.delete();
         redScale.delete();
         aBoost.delete();
+        aChannel32F.delete();
 
         return aAdjusted;
     } catch (error) {
@@ -1991,6 +2003,9 @@ export class HonchoEditorClass implements HonchoEditor {
         oriA.convertTo(aTemp, cv.CV_32F);
         oriB.convertTo(bTemp, cv.CV_32F);
 
+        const oriA32F = new cv.Mat();
+        oriA.convertTo(oriA32F, cv.CV_32F);
+
         const neutralMat = cv.Mat.ones(aTemp.size(), cv.CV_32F);
         neutralMat.setTo(cv.Scalar.all(128.0)); // Neutral point for a and b
         const scaleMat = cv.Mat.ones(aTemp.size(), cv.CV_32F);
@@ -2011,7 +2026,7 @@ export class HonchoEditorClass implements HonchoEditor {
         // Apply red vibrance boost if vibrance > 0
         let finalA = aTemp;
         if (vibrance > 0) {
-            finalA = this.boostRedVibrance(aTemp, oriA, saturationFactor);
+            finalA = this.boostRedVibrance(aTemp, oriA32F, saturationFactor);
         }
 
         // Convert channels to CV_8U and clamp
@@ -2055,6 +2070,7 @@ export class HonchoEditorClass implements HonchoEditor {
         labAdjusted.delete();
         mergeChannels.delete();
         adjustedImage.delete();
+        oriA32F.delete();
         if (vibrance > 0 && finalA !== aTemp) {
             finalA.delete();
         }
@@ -2160,10 +2176,13 @@ export class HonchoEditorClass implements HonchoEditor {
       // Every user slider is saved into the configHistory.
       // So for example user want to change from 0 to 5, but sliding it
       // It will save all the step. (0, 1, 2, 3, 4, 5).
+      
+      // IT SMELL LIKE A FIX YEE!!!!
+
       // const debouncer = (ms: number) => new Promise(res => setTimeout(res, ms));
       
       // await debouncer(1000);
-      
+      // inital state to saved in configHistory
       if (this.configHistory.length == 0) {
         this.configHistory.push({
           Exposure: this.exposureValue,
@@ -2195,7 +2214,7 @@ export class HonchoEditorClass implements HonchoEditor {
         Temperature: this.temperatureValue,
         Shadow: this.shadowValue,
         Highlights: this.highlightValue,
-        Tint: this.tintValue,
+        Tint: this.tintValue * 10,
         Black: this.blackValue,
         White: this.whiteValue,
         Contrast: this.contrastValue,
