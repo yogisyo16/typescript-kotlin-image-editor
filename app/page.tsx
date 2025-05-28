@@ -5,6 +5,7 @@ import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
 import cv from "@techstark/opencv-js";
 
 export default function Home() {
+  // For imageref
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCvLoaded, setIsCvLoaded] = useState(false);
@@ -22,7 +23,7 @@ export default function Home() {
   const [saturationScore, setSaturationScore] = useState(0);
   const [vibranceScore, setVibranceScore] = useState(0);
 
-  const historyOn = [];
+  // const historyOn = [];
   const onOpenCVLoad = () => {
     setIsCvLoaded(true);
   };
@@ -140,22 +141,7 @@ export default function Home() {
         canvasRef.current
       );
     }
-  }, [
-    exposureScore,
-    temperatureScore,
-    tintScore,
-    highlightsScore,
-    shadowsScore,
-    blackScore,
-    whiteScore,
-    contrastScore,
-    saturationScore,
-    vibranceScore,
-    imgRef,
-    canvasRef,
-    isCvLoaded,
-    imageLoaded,
-  ]);
+  });
 
   const saveHistory = () => {
     if (editorRef.current) {
