@@ -1,201 +1,190 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Script from "next/script";
 import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
+import { Config } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
 
 export default function Home() {
-  // For imageref
-  const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const editorRef = useRef<HonchoEditorClass | null>(null);
   const [isCvLoaded, setIsCvLoaded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const editorRef = useRef<HonchoEditorClass | null>(null);
+  const [originalMat, setOriginalMat] = useState<cv.Mat | null>(null); // Store original cv.Mat
+  const [adjustments, setAdjustments] = useState<Config>({
+    Exposure: 0,
+    Temperature: 0,
+    Tint: 0,
+    Highlights: 0,
+    Shadow: 0,
+    Black: 0,
+    White: 0,
+    Contrast: 0,
+    Saturation: 0,
+    Vibrance: 0,
+  });
 
-  const [exposureScore, setExposureScore] = useState(0);
-  const [temperatureScore, setTemperatureScore] = useState(0);
-  const [tintScore, setTintScore] = useState(0);
-  const [highlightsScore, setHighlightsScore] = useState(0);
-  const [shadowsScore, setShadowsScore] = useState(0);
-  const [blackScore, setBlackScore] = useState(0);
-  const [whiteScore, setWhiteScore] = useState(0);
-  const [contrastScore, setContrastScore] = useState(0);
-  const [saturationScore, setSaturationScore] = useState(0);
-  const [vibranceScore, setVibranceScore] = useState(0);
-
-  // const historyOn = [];
-  const onOpenCVLoad = () => {
+  const onOpenCVLoad = useCallback(() => {
     setIsCvLoaded(true);
+  }, []);
+
+  const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number): cv.Mat => {
+    if (!mat || mat.empty()) {
+      console.error("Invalid or empty Mat");
+      return new cv.Mat();
+    }
+
+    const width = mat.cols;
+    const height = mat.rows;
+
+    // Calculate aspect ratio
+    const aspectRatio = width / height;
+    const targetAspectRatio = targetWidth / targetHeight;
+
+    let newWidth: number, newHeight: number;
+
+    // Fit to width or height while preserving aspect ratio
+    if (aspectRatio > targetAspectRatio) {
+      // Image is wider than target, fit to width
+      newWidth = targetWidth;
+      newHeight = Math.round(targetWidth / aspectRatio);
+    } else {
+      // Image is taller than target, fit to height
+      newHeight = targetHeight;
+      newWidth = Math.round(targetHeight * aspectRatio);
+    }
+
+    // Create destination Mat
+    const resizedMat = new cv.Mat();
+    const dsize = new cv.Size(newWidth, newHeight);
+    cv.resize(mat, resizedMat, dsize, 0, 0, cv.INTER_AREA);
+
+    return resizedMat;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file upload
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.readyState === FileReader.DONE && imgRef.current) {
-        imgRef.current.src = evt.target.result as string;
+    const img = new Image();
+    img.onload = () => {
+      if (isCvLoaded) {
+        const mat = cv.imread(img);
+        const resizedMat = resizeMatToFit(mat, 360, 180);
+        setOriginalMat(mat); // Store cv.Mat
+        if (!editorRef.current) {
+          editorRef.current = new HonchoEditorClass(mat);
+          setAdjustments({
+            Exposure: editorRef.current.getConfig().Exposure,
+            Temperature: editorRef.current.getConfig().Temperature,
+            Tint: editorRef.current.getConfig().Tint,
+            Highlights: editorRef.current.getConfig().Highlights,
+            Shadow: editorRef.current.getConfig().Shadow,
+            Black: editorRef.current.getConfig().Black,
+            White: editorRef.current.getConfig().White,
+            Contrast: editorRef.current.getConfig().Contrast,
+            Saturation: editorRef.current.getConfig().Saturation,
+            Vibrance: editorRef.current.getConfig().Vibrance,
+          });
+        }
         setImageLoaded(true);
       }
     };
-    reader.readAsDataURL(file);
-  };
+    img.src = URL.createObjectURL(file);
+  }, [isCvLoaded]);
 
-  // Initialize editor
+  // Apply adjustments
   useEffect(() => {
-    if (isCvLoaded && imageLoaded && imgRef.current && canvasRef.current) {
-      if (!editorRef.current) {
-        editorRef.current = new HonchoEditorClass(
-          imgRef.current,
-          canvasRef.current
-        );
-      }
+    if (editorRef.current && isCvLoaded && imageLoaded && canvasRef.current && originalMat) {
+      editorRef.current
+        .adjust_image_colors_merge(
+          adjustments.Exposure,
+          adjustments.Temperature,
+          adjustments.Tint,
+          adjustments.Highlights,
+          adjustments.Shadow,
+          adjustments.Black,
+          adjustments.White,
+          adjustments.Contrast,
+          adjustments.Saturation,
+          adjustments.Vibrance,
+          originalMat
+        )
+        .then((resultMat) => {
+          cv.imshow(canvasRef.current!, resultMat);
+          resultMat.delete(); // Clean up
+        })
+        .catch((err) => console.error("Adjustment error:", err));
     }
-  }, [isCvLoaded, imageLoaded]);
+  }, [adjustments, isCvLoaded, imageLoaded, originalMat]);
 
-  // Apply adjustments when sliders change
-  // useEffect(() => {
-  //   if (
-  //     editorRef.current &&
-  //     isCvLoaded &&
-  //     imageLoaded &&
-  //     imgRef.current &&
-  //     canvasRef.current
-  //   ) {
-  //     const applyAdjustments = async () => {
-  //       let mat = cv.imread(imgRef.current!);
-        
-  //       if (exposureScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_exposure(exposureScore, mat);
-  //       }
-  //       if (temperatureScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_temperature(temperatureScore, mat);
-  //       }
-  //       if (tintScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_tint(tintScore, mat);
-  //       }
-  //       if (highlightsScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_highlights(highlightsScore, mat);
-  //       }
-  //       if (shadowsScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_shadows(shadowsScore, mat);
-  //       }
-  //       if (blackScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_blacks(blackScore, mat);
-  //       }
-  //       if (whiteScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_whites(whiteScore, mat);
-  //       }
-  //       if (contrastScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_contrast(contrastScore, mat);
-  //       }
-  //       if (saturationScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_saturation(saturationScore, mat);
-  //       }
-  //       if (vibranceScore !== 0) {
-  //         mat = await editorRef.current!.modify_image_vibrance(vibranceScore, mat);
-  //       }
-  //       cv.imshow(canvasRef.current!, mat);
-  //       mat.delete();
-  //     };
-  //     applyAdjustments();
-  //   }
-  // }, [
-  //   exposureScore,
-  //   temperatureScore,
-  //   tintScore,
-  //   highlightsScore,
-  //   shadowsScore,
-  //   blackScore,
-  //   whiteScore,
-  //   contrastScore,
-  //   saturationScore,
-  //   vibranceScore,
-  //   isCvLoaded,
-  //   imageLoaded,
-  // ]);
-
-  useEffect(() => {
-    if (
-      editorRef.current &&
-      isCvLoaded &&
-      imageLoaded &&
-      imgRef.current &&
-      canvasRef.current
-    ) {
-      // console.log("Adjusting image colors");
-      editorRef.current.adjust_image_colors_merge(
-        exposureScore,
-        temperatureScore,
-        tintScore,
-        highlightsScore,
-        shadowsScore,
-        blackScore,
-        whiteScore,
-        contrastScore,
-        saturationScore,
-        vibranceScore,
-        imgRef.current,
-        canvasRef.current
-      );
-    }
-  });
-
-  const saveHistory = () => {
+  const saveHistory = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.configHistotrypush();
     }
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.reset();
-      setExposureScore(editorRef.current["exposureValue"]);
-      setTemperatureScore(editorRef.current["temperatureValue"]);
-      setTintScore(editorRef.current["tintValue"]);
-      setHighlightsScore(editorRef.current["highlightValue"]);
-      setShadowsScore(editorRef.current["shadowValue"]);
-      setBlackScore(editorRef.current["blackValue"]);
-      setWhiteScore(editorRef.current["whiteValue"]);
-      setContrastScore(editorRef.current["contrastValue"]);
-      setVibranceScore(editorRef.current["vibranceValue"]);
-      setSaturationScore(editorRef.current["saturationValue"]);
+      setAdjustments({
+        Exposure: editorRef.current.getConfig().Exposure,
+        Temperature: editorRef.current.getConfig().Temperature,
+        Tint: editorRef.current.getConfig().Tint,
+        Highlights: editorRef.current.getConfig().Highlights,
+        Shadow: editorRef.current.getConfig().Shadow,
+        Black: editorRef.current.getConfig().Black,
+        White: editorRef.current.getConfig().White,
+        Contrast: editorRef.current.getConfig().Contrast,
+        Saturation: editorRef.current.getConfig().Saturation,
+        Vibrance: editorRef.current.getConfig().Vibrance,
+      });
     }
-  };
+  }, []);
 
-  const handleUndo = () => {
-    if(editorRef.current) {
-      editorRef.current.undo();
-      setExposureScore(editorRef.current["exposureValue"]);
-      setTemperatureScore(editorRef.current["temperatureValue"]);
-      setTintScore(editorRef.current["tintValue"]);
-      setHighlightsScore(editorRef.current["highlightValue"]);
-      setShadowsScore(editorRef.current["shadowValue"]);
-      setBlackScore(editorRef.current["blackValue"]);
-      setWhiteScore(editorRef.current["whiteValue"]);
-      setContrastScore(editorRef.current["contrastValue"]);
-      setVibranceScore(editorRef.current["vibranceValue"]);
-      setSaturationScore(editorRef.current["saturationValue"]);
-    }
-  }
-
-  const handleRedo = () => {
+  const handleUndo = useCallback(() => {
     if (editorRef.current) {
-      editorRef.current.redo();
-      setExposureScore(editorRef.current["exposureValue"]);
-      setTemperatureScore(editorRef.current["temperatureValue"]);
-      setTintScore(editorRef.current["tintValue"]);
-      setHighlightsScore(editorRef.current["highlightValue"]);
-      setShadowsScore(editorRef.current["shadowValue"]);
-      setBlackScore(editorRef.current["blackValue"]);
-      setWhiteScore(editorRef.current["whiteValue"]);
-      setContrastScore(editorRef.current["contrastValue"]);
-      setVibranceScore(editorRef.current["vibranceValue"]);
-      setSaturationScore(editorRef.current["saturationValue"]);
+      editorRef.current.undo().then(() => {
+        setAdjustments({
+          Exposure: editorRef.current!.getConfig().Exposure,
+          Temperature: editorRef.current!.getConfig().Temperature,
+          Tint: editorRef.current!.getConfig().Tint,
+          Highlights: editorRef.current!.getConfig().Highlights,
+          Shadow: editorRef.current!.getConfig().Shadow,
+          Black: editorRef.current!.getConfig().Black,
+          White: editorRef.current!.getConfig().White,
+          Contrast: editorRef.current!.getConfig().Contrast,
+          Saturation: editorRef.current!.getConfig().Saturation,
+          Vibrance: editorRef.current!.getConfig().Vibrance,
+        });
+      });
     }
-  }
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.redo().then(() => {
+        setAdjustments({
+          Exposure: editorRef.current!.getConfig().Exposure,
+          Temperature: editorRef.current!.getConfig().Temperature,
+          Tint: editorRef.current!.getConfig().Tint,
+          Highlights: editorRef.current!.getConfig().Highlights,
+          Shadow: editorRef.current!.getConfig().Shadow,
+          Black: editorRef.current!.getConfig().Black,
+          White: editorRef.current!.getConfig().White,
+          Contrast: editorRef.current!.getConfig().Contrast,
+          Saturation: editorRef.current!.getConfig().Saturation,
+          Vibrance: editorRef.current!.getConfig().Vibrance,
+        });
+      });
+    }
+  }, []);
+
+  const handleAdjustmentChange = useCallback((key: keyof Config, value: number) => {
+    setAdjustments((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   return (
     <div>
@@ -243,100 +232,42 @@ export default function Home() {
               <div className="flex flex-col items-center">
                 <div className="ml-4">
                   <label>
-                    Exposure: {exposureScore}
+                    Exposure: {adjustments.Exposure}
                     <input
                       type="range"
                       min="-5"
                       max="5"
                       step="0.1"
-                      value={exposureScore}
-                      onChange={(e) => setExposureScore(Number(e.target.value))}
+                      value={adjustments.Exposure}
+                      onChange={(e) => handleAdjustmentChange("Exposure", Number(e.target.value))}
                       onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
                 <div>
                   <label>
-                    Temperature: {temperatureScore}
+                    Temperature: {adjustments.Temperature}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={temperatureScore}
-                      onChange={(e) => setTemperatureScore(Number(e.target.value))}
+                      value={adjustments.Temperature}
+                      onChange={(e) => handleAdjustmentChange("Temperature", Number(e.target.value))}
                       onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
                 <div>
                   <label>
-                    Tint: {tintScore}
+                    Tint: {adjustments.Tint}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={tintScore}
-                      onChange={(e) => setTintScore(Number(e.target.value))}
-                      onMouseUp={saveHistory}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="flex flex-col items-center">
-                <div>
-                  <label>
-                    Highlights: {highlightsScore}
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      step="1"
-                      value={highlightsScore}
-                      onChange={(e) => setHighlightsScore(Number(e.target.value))}
-                      onMouseUp={saveHistory}
-                    />
-                  </label>
-                </div>
-                <div>
-                  <label>
-                    Shadows: {shadowsScore}
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      step="1"
-                      value={shadowsScore}
-                      onChange={(e) => setShadowsScore(Number(e.target.value))}
-                      onMouseUp={saveHistory}
-                    />
-                  </label>
-                </div>
-                <div>
-                  <label>
-                    Blacks: {blackScore}
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      step="1"
-                      value={blackScore}
-                      onChange={(e) => setBlackScore(Number(e.target.value))}
-                      onMouseUp={saveHistory}
-                    />
-                  </label>
-                </div>
-                <div>
-                  <label>
-                    Whites: {whiteScore}
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      step="1"
-                      value={whiteScore}
-                      onChange={(e) => setWhiteScore(Number(e.target.value))}
+                      value={adjustments.Tint}
+                      onChange={(e) => handleAdjustmentChange("Tint", Number(e.target.value))}
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -345,42 +276,100 @@ export default function Home() {
               <div className="flex flex-col items-center">
                 <div>
                   <label>
-                    Contrast: {contrastScore}
+                    Highlights: {adjustments.Highlights}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={contrastScore}
-                      onChange={(e) => setContrastScore(Number(e.target.value))}
+                      value={adjustments.Highlights}
+                      onChange={(e) => handleAdjustmentChange("Highlights", Number(e.target.value))}
                       onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
                 <div>
                   <label>
-                    Saturation: {saturationScore}
+                    Shadows: {adjustments.Shadow}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={saturationScore}
-                      onChange={(e) => setSaturationScore(Number(e.target.value))}
+                      value={adjustments.Shadow}
+                      onChange={(e) => handleAdjustmentChange("Shadow", Number(e.target.value))}
                       onMouseUp={saveHistory}
                     />
                   </label>
                 </div>
                 <div>
                   <label>
-                    Vibrance: {vibranceScore}
+                    Blacks: {adjustments.Black}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={vibranceScore}
-                      onChange={(e) => setVibranceScore(Number(e.target.value))}
+                      value={adjustments.Black}
+                      onChange={(e) => handleAdjustmentChange("Black", Number(e.target.value))}
+                      onMouseUp={saveHistory}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    Whites: {adjustments.White}
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      step="1"
+                      value={adjustments.White}
+                      onChange={(e) => handleAdjustmentChange("White", Number(e.target.value))}
+                      onMouseUp={saveHistory}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <div>
+                  <label>
+                    Contrast: {adjustments.Contrast}
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      step="1"
+                      value={adjustments.Contrast}
+                      onChange={(e) => handleAdjustmentChange("Contrast", Number(e.target.value))}
+                      onMouseUp={saveHistory}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    Saturation: {adjustments.Saturation}
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      step="1"
+                      value={adjustments.Saturation}
+                      onChange={(e) => handleAdjustmentChange("Saturation", Number(e.target.value))}
+                      onMouseUp={saveHistory}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    Vibrance: {adjustments.Vibrance}
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      step="1"
+                      value={adjustments.Vibrance}
+                      onChange={(e) => handleAdjustmentChange("Vibrance", Number(e.target.value))}
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -390,11 +379,20 @@ export default function Home() {
             <div className="flex flex-col md:flex-row gap-6">
               <div>
                 <h3 className="text-sm">Original</h3>
-                <img ref={imgRef} alt="Original" width={640} height={360} />
+                {/* Render original image from originalMat */}
+                <canvas
+                  ref={(el) => {
+                    if (el && originalMat) {
+                      cv.imshow(el, originalMat);
+                    }
+                  }}
+                  width={360}
+                  height={180}
+                />
               </div>
               <div>
                 <h3 className="text-sm">Processed</h3>
-                <canvas ref={canvasRef} width={640} height={360} />
+                <canvas ref={canvasRef} width={360} height={180} />
               </div>
             </div>
           </div>

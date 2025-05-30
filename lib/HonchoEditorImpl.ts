@@ -41,32 +41,37 @@ export function useOpenCV() {
 }
 
 export class HonchoEditorClass implements HonchoEditor {
-  private imgElement: HTMLImageElement;
-  private canvasElement: HTMLCanvasElement;
-  private currentConfigIndex: number = -1;
+  private inputImage: cv.Mat;
   private listener: Listener | null = null;
-  // -- variable for adjustment
-  private exposureValue: number = 0;
-  private temperatureValue: number = 0;
-  private tintValue: number = 0;
-  private highlightValue: number = 0;
-  private shadowValue: number = 0;
-    // -- variable for adjustment not yet implemented
-  private blackValue: number = 0;
-  private whiteValue: number = 0;
-  // -- variable for adjustment
-  private contrastValue: number = 0;
-  private saturationValue: number = 0;
-  private vibranceValue: number = 0;
-  // -- config for history
-  public configHistory: Config[] = [];
-  public redoStack: Config[] = [];
+  public config: Config = {
+    Exposure: 0,
+    Temperature: 0,
+    Tint: 0,
+    Highlights: 0,
+    Shadow: 0,
+    Black: 0,
+    White: 0,
+    Contrast: 0,
+    Saturation: 0,
+    Vibrance: 0,
+  };
+  private configHistory: Config[] = [];
+  private currentHistoryIndex: number = -1;
+  private redoStack: Config[] = [];
 
-  
+  constructor(inputImage: cv.Mat) {
+    this.inputImage = inputImage.clone(); // Clone to avoid modifying the input
+    this.configHistory.push({ ...this.config });
+  }
 
-  constructor(imgElement: HTMLImageElement, canvasElement: HTMLCanvasElement) {
-    this.imgElement = imgElement;
-    this.canvasElement = canvasElement;
+  // Getter for config
+  public getConfig(): Config {
+    return { ...this.config };
+  }
+
+  // Setter for individual config values
+  public setConfigValue(key: keyof Config, value: number): void {
+    this.config = { ...this.config, [key]: value };
   }
 
   setListener(listener: Listener) {
@@ -79,7 +84,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   onImageUpdate(inputImage: cv.Mat): cv.Mat {
-    return inputImage;
+    return inputImage.clone(); // Clone to avoid modifying the input
   }
 
   // -- From kotlin to use bitmap, is not used for web (SEMANGAT GES yang andro dan ios)
@@ -90,7 +95,7 @@ export class HonchoEditorClass implements HonchoEditor {
   // }
 
   async modify_image_exposure(exposure: number, inputImage: cv.Mat): Promise<cv.Mat> {
-    this.exposureValue = exposure;
+    this.config.Exposure = exposure;
     const originalMat = inputImage.clone();
     
     // Ensure input is 3 channels (BGR) to avoid RGBA issues
@@ -105,11 +110,11 @@ export class HonchoEditorClass implements HonchoEditor {
 
     let factor = 1.0;
     let beta = 0.0;
-    if (this.exposureValue > 0) {
-      beta = 15 * this.exposureValue;
-      factor = Math.pow(2.0, this.exposureValue / 2.2);
+    if (this.config.Exposure > 0) {
+      beta = 15 * this.config.Exposure;
+      factor = Math.pow(2.0, this.config.Exposure / 2.2);
     } else {
-      factor = Math.pow(2.0, this.exposureValue / 1.5);
+      factor = Math.pow(2.0, this.config.Exposure / 1.5);
     }
 
     const imageFloat = new cv.Mat();
@@ -154,7 +159,6 @@ export class HonchoEditorClass implements HonchoEditor {
     mergedHsv.delete();
 
     // debugging for config value
-    // console.log("Exposure From Config: ", this.exposureValue);
     // console.log("Exposure Value: ", exposure);
     return finalHSV;
   }
@@ -478,7 +482,7 @@ export class HonchoEditorClass implements HonchoEditor {
   
   // -- Implement adjustment Termperature
   async modify_image_temperature(colorTemperature: number, inputImage: cv.Mat): Promise<cv.Mat> {
-    this.temperatureValue = colorTemperature;
+    this.config.Temperature = colorTemperature;
     const labImage = new cv.Mat();
     const originalMat = inputImage.clone();
   
@@ -503,9 +507,9 @@ export class HonchoEditorClass implements HonchoEditor {
     cv.subtract(dummyOnes, lumNorm, lumSub);
     const lumScalingFactor = this.sigmoid(lumSub, 5.0, 0.5);
   
-    const adjustedMat = this.temperatureValue >= 0
-      ? await this.boostWarmTemperature(this.temperatureValue, originalMat, lumScalingFactor)
-      : await this.boostCoolTemperature(this.temperatureValue, originalMat, lumScalingFactor);
+    const adjustedMat = this.config.Temperature >= 0
+      ? await this.boostWarmTemperature(this.config.Temperature, originalMat, lumScalingFactor)
+      : await this.boostCoolTemperature(this.config.Temperature, originalMat, lumScalingFactor);
   
     // Convert for display
     cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2RGB);
@@ -780,10 +784,10 @@ export class HonchoEditorClass implements HonchoEditor {
 
   // -- Implement adjustment Tint
   async modify_image_tint(tint: number, inputImage: cv.Mat): Promise<cv.Mat> {
-    this.tintValue = tint;
+    this.config.Tint = tint;
     const labImage = new cv.Mat();
     const originalMat = inputImage.clone();
-    tint = this.tintValue / 10;
+    tint = this.config.Tint / 10;
     cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
     cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
 
@@ -874,12 +878,12 @@ export class HonchoEditorClass implements HonchoEditor {
         throw new Error("Input image is empty");
       }
 
-      this.highlightValue = highlight;
+      this.config.Highlights = highlight;
 
       const originalImage = new cv.Mat();
       cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
 
-      const highlightFactor = this.highlightValue / 100;
+      const highlightFactor = this.config.Highlights / 100;
 
       const hsvImage = new cv.Mat();
       cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
@@ -939,8 +943,8 @@ export class HonchoEditorClass implements HonchoEditor {
       cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
 
       // Map shadows (0 to 100) to a darkening factor (1 to 0)
-      this.shadowValue = shadows;
-      const shadowFactor = 1 - (this.shadowValue / -100); // 1 (no change) to 0 (max darkening)
+      this.config.Shadow = shadows;
+      const shadowFactor = 1 - (this.config.Shadow / -100); // 1 (no change) to 0 (max darkening)
 
       const hsvImage = new cv.Mat();
       cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
@@ -986,12 +990,12 @@ export class HonchoEditorClass implements HonchoEditor {
       if (!src || src.empty()) {
         throw new Error("Input image is empty");
       }
-      this.blackValue = blacks;
+      this.config.Black = blacks;
 
       const originalImage = new cv.Mat();
       cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
 
-      const blackFactor = this.blackValue / 100;
+      const blackFactor = this.config.Black / 100;
 
       const hsvImage = new cv.Mat();
       cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
@@ -1746,7 +1750,7 @@ export class HonchoEditorClass implements HonchoEditor {
   async modify_image_contrast(contrastScore: number, inputImage: cv.Mat): Promise<cv.Mat> {
     const imageToProcess = inputImage.clone();
     cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
-    this.contrastValue = contrastScore
+    this.config.Contrast = contrastScore
     const contrastFactor = contrastScore / 10;
 
     if (contrastFactor >= 0) {
@@ -1866,7 +1870,7 @@ export class HonchoEditorClass implements HonchoEditor {
         throw new Error("Input image is empty");
       }
 
-      this.saturationValue = saturation;
+      this.config.Saturation = saturation;
 
       const originalImage = new cv.Mat();
       cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
@@ -1880,7 +1884,7 @@ export class HonchoEditorClass implements HonchoEditor {
       const oriA = labChannels.get(1);
       const oriB = labChannels.get(2);
 
-      const satRatio = 1 + this.saturationValue / 100.0;
+      const satRatio = 1 + this.config.Saturation / 100.0;
       const aTemp = new cv.Mat();
       const bTemp = new cv.Mat();
       cv.convertScaleAbs(oriA, aTemp, satRatio, (1 - satRatio) * 128);
@@ -1982,7 +1986,7 @@ export class HonchoEditorClass implements HonchoEditor {
         if (!src || src.empty()) {
             throw new Error("Input image is empty");
         }
-        this.vibranceValue = vibrance;
+        this.config.Vibrance = vibrance;
 
         // Convert to BGR and then to Lab
         const originalImage = new cv.Mat();
@@ -1999,7 +2003,7 @@ export class HonchoEditorClass implements HonchoEditor {
         const oriB = labChannels.get(2); // b channel (blue-yellow)
 
         // Calculate vibrance factor (0 to 1 for vibrance 0 to 100)
-        const saturationFactor = this.vibranceValue / 100.0;
+        const saturationFactor = this.config.Vibrance / 100.0;
 
         // Adjust a and b channels for general vibrance
         const aTemp = new cv.Mat();
@@ -2098,110 +2102,96 @@ export class HonchoEditorClass implements HonchoEditor {
     contrast: number,
     saturation: number,
     vibrance: number,
-    inputImage: HTMLImageElement,
-    canvasRef: HTMLCanvasElement
-  ): Promise<void> {
-
-    if (!inputImage || !canvasRef) {
-      throw new Error("Image or canvas not available");
-    }
-
+    inputImage?: cv.Mat // Optional input, defaults to stored inputImage
+  ): Promise<cv.Mat> {
     try {
-      let src = cv.imread(inputImage);
+      // Use provided inputImage or stored inputImage
+      let src = inputImage ? inputImage.clone() : this.inputImage.clone();
       if (!src || src.empty()) {
-        throw new Error("Failed to read image from imageRef");
+        throw new Error("Input image is empty");
       }
-      let currentImage = src;
-      // let currentImage16S = new Int16Array(currentImage.data);
-      // let dataExpo;
-      // let dataTemp;
-      // let dataTint;
-      // let dataHigh;
-      // let dataShadow;
-      // let dataBlack;
-      // let dataWhite;
-      // let dataContrast;
-      // let dataSaturation;
-      // let dataVibrance;
-      
+
+      // Apply adjustments sequentially
       if (exposure !== 0) {
-        this.exposureValue = exposure;
-        currentImage = (await this.modify_image_exposure(this.exposureValue, currentImage));
+        this.config.Exposure = exposure;
+        src = await this.modify_image_exposure(this.config.Exposure, src);
       }
 
       if (temperature !== 0) {
-        this.temperatureValue = temperature;
-        currentImage = (await this.modify_image_temperature(this.temperatureValue, currentImage));
+        this.config.Temperature = temperature;
+        src = await this.modify_image_temperature(this.config.Temperature, src);
       }
 
       if (tint !== 0) {
-        this.tintValue = tint;
-        currentImage = (await this.modify_image_tint(this.tintValue, currentImage));
+        this.config.Tint = tint;
+        src = await this.modify_image_tint(this.config.Tint, src);
       }
 
       if (highlights !== 0) {
-        this.highlightValue = highlights;
-        currentImage = (await this.modify_image_highlights(this.highlightValue, currentImage));
+        this.config.Highlights = highlights;
+        src = await this.modify_image_highlights(this.config.Highlights, src);
       }
 
       if (shadow !== 0) {
-        this.shadowValue = shadow;
-        currentImage = (await this.modify_image_shadows(this.shadowValue, currentImage));
+        this.config.Shadow = shadow;
+        src = await this.modify_image_shadows(this.config.Shadow, src);
       }
 
       if (black !== 0) {
-        this.blackValue = black;
-        currentImage = (await this.modify_image_blacks(this.blackValue, currentImage));
+        this.config.Black = black;
+        src = await this.modify_image_blacks(this.config.Black, src);
       }
 
       if (white !== 0) {
-        this.whiteValue = white;
-        currentImage = (await this.modify_image_whites(this.whiteValue, currentImage));
+        this.config.White = white;
+        src = await this.modify_image_whites(this.config.White, src);
       }
 
       if (contrast !== 0) {
-        this.contrastValue = contrast;
-        currentImage = (await this.modify_image_contrast(this.contrastValue, currentImage));
+        this.config.Contrast = contrast;
+        src = await this.modify_image_contrast(this.config.Contrast, src);
       }
 
       if (saturation !== 0) {
-        this.saturationValue = saturation;
-        currentImage = (await this.modify_image_saturation(this.saturationValue, currentImage));
+        this.config.Saturation = saturation;
+        src = await this.modify_image_saturation(this.config.Saturation, src);
       }
 
       if (vibrance !== 0) {
-        this.vibranceValue = vibrance;
-        currentImage = (await this.modify_image_vibrance(this.vibranceValue, currentImage));
+        this.config.Vibrance = vibrance;
+        src = await this.modify_image_vibrance(this.config.Vibrance, src);
       }
 
-      // let deltaExposure = dataExpo - currentImage16S;
-      
-      // IT SMELL LIKE A FIX YEE!!!!
-
-      // const debouncer = (ms: number) => new Promise(res => setTimeout(res, ms));
-      
-      // await debouncer(1000);
-      // inital state to saved in configHistory
-      if (this.configHistory.length == 0) {
+      // Save initial config to history if empty
+      if (this.configHistory.length === 1) { // Length 1 includes initial config
         this.configHistory.push({
-          Exposure: this.exposureValue,
-          Temperature: this.temperatureValue,
-          Shadow: this.shadowValue,
-          Highlights: this.highlightValue,
-          Tint: this.tintValue,
-          Black: this.blackValue,
-          White: this.whiteValue,
-          Contrast: this.contrastValue,
-          Saturation: this.saturationValue,
-          Vibrance: this.vibranceValue
+          Exposure: this.config.Exposure,
+          Temperature: this.config.Temperature,
+          Tint: this.config.Tint,
+          Highlights: this.config.Highlights,
+          Shadow: this.config.Shadow,
+          Black: this.config.Black,
+          White: this.config.White,
+          Contrast: this.config.Contrast,
+          Saturation: this.config.Saturation,
+          Vibrance: this.config.Vibrance,
         });
-        console.log("first push: ",this.configHistory);
+        console.log("Config history updated:", this.configHistory);
       }
-      
-      cv.imshow(canvasRef, currentImage);
 
+      // Notify listener of image update
+      // if (this.listener?.onImageRendered) {
+      //   this.listener.onImageRendered(src);
+      // }
+
+      // Clean up source if it’s not the output
+      if (src !== src) {
+        src.delete();
+      }
+
+      return src; // Return processed image as cv.Mat
     } catch (error) {
-      console.error("Error in modify_image_colors:", error);
+      console.error("Error in adjust_image_colors_merge:", error);
       throw error;
     }
   }
@@ -2210,16 +2200,16 @@ export class HonchoEditorClass implements HonchoEditor {
     // Here is to save configHistory after initial state
     if (this.configHistory.length > 0) {
       this.configHistory.push({
-        Exposure: this.exposureValue,
-        Temperature: this.temperatureValue,
-        Shadow: this.shadowValue,
-        Highlights: this.highlightValue,
-        Tint: this.tintValue,
-        Black: this.blackValue,
-        White: this.whiteValue,
-        Contrast: this.contrastValue,
-        Saturation: this.saturationValue,
-        Vibrance: this.vibranceValue
+        Exposure: this.config.Exposure,
+        Temperature: this.config.Temperature,
+        Shadow: this.config.Shadow,
+        Highlights: this.config.Highlights,
+        Tint: this.config.Tint,
+        Black: this.config.Black,
+        White: this.config.White,
+        Contrast: this.config.Contrast,
+        Saturation: this.config.Saturation,
+        Vibrance: this.config.Vibrance
       });
       console.log("After length > 0: ",this.configHistory);
     }
@@ -2234,16 +2224,16 @@ export class HonchoEditorClass implements HonchoEditor {
       if(newConfig){
         this.redoStack.push(newConfig);
         if (undoConfig) {
-          this.exposureValue = undoConfig.Exposure;
-          this.temperatureValue = undoConfig.Temperature;
-          this.tintValue = undoConfig.Tint;
-          this.highlightValue = undoConfig.Highlights;
-          this.shadowValue = undoConfig.Shadow;
-          this.blackValue = undoConfig.Black;
-          this.whiteValue = undoConfig.White;
-          this.contrastValue = undoConfig.Contrast;
-          this.saturationValue = undoConfig.Saturation;
-          this.vibranceValue = undoConfig.Vibrance;  
+          this.config.Exposure = undoConfig.Exposure;
+          this.config.Temperature = undoConfig.Temperature;
+          this.config.Tint = undoConfig.Tint;
+          this.config.Highlights = undoConfig.Highlights;
+          this.config.Shadow = undoConfig.Shadow;
+          this.config.Black = undoConfig.Black;
+          this.config.White = undoConfig.White;
+          this.config.Contrast = undoConfig.Contrast;
+          this.config.Saturation = undoConfig.Saturation;
+          this.config.Vibrance = undoConfig.Vibrance;  
         }
         // console.log("this is inside undo: ", undoConfig);
         // console.log("inside configHistory: ", this.configHistory);
@@ -2257,36 +2247,36 @@ export class HonchoEditorClass implements HonchoEditor {
       const nowConfig = this.redoStack.length >= 0 ? this.redoStack[this.redoStack.length - 1] : null;
       if (redoConfig) {
         this.configHistory.push(redoConfig);
-        this.exposureValue = redoConfig.Exposure;
-        this.temperatureValue = redoConfig.Temperature;
-        this.tintValue = redoConfig.Tint;
-        this.highlightValue = redoConfig.Highlights;
-        this.shadowValue = redoConfig.Shadow;
-        this.blackValue = redoConfig.Black;
-        this.whiteValue = redoConfig.White;
-        this.contrastValue = redoConfig.Contrast;
-        this.saturationValue = redoConfig.Saturation;
-        this.vibranceValue = redoConfig.Vibrance;
+        this.config.Exposure = redoConfig.Exposure;
+        this.config.Temperature = redoConfig.Temperature;
+        this.config.Tint = redoConfig.Tint;
+        this.config.Highlights = redoConfig.Highlights;
+        this.config.Shadow = redoConfig.Shadow;
+        this.config.Black = redoConfig.Black;
+        this.config.White = redoConfig.White;
+        this.config.Contrast = redoConfig.Contrast;
+        this.config.Saturation = redoConfig.Saturation;
+        this.config.Vibrance = redoConfig.Vibrance;
       }
     }
   }
 
   reset(): void {
-    const mat = cv.imread(this.imgElement);
+    // const mat = cv.imread(this.imgElement);
     this.configHistory = [];
     this.redoStack = [];
-    this.exposureValue = 0;
-    this.temperatureValue = 0;
-    this.tintValue = 0;
-    this.highlightValue = 0;
-    this.shadowValue = 0;
-    this.blackValue = 0;
-    this.whiteValue = 0;
-    this.contrastValue = 0;
-    this.saturationValue = 0;
-    this.vibranceValue = 0;
+    this.config.Exposure = 0;
+    this.config.Temperature = 0;
+    this.config.Tint = 0;
+    this.config.Highlights = 0;
+    this.config.Shadow = 0;
+    this.config.Black = 0;
+    this.config.White = 0;
+    this.config.Contrast = 0;
+    this.config.Saturation = 0;
+    this.config.Vibrance = 0;
 
-    mat.delete();
+    // mat.delete();
   }
 
   sendConfigServer(): void {

@@ -30,21 +30,19 @@ export interface HonchoEditor {
   modify_image_vibrance(vibrance: number, inputImage: cv.Mat): Promise<cv.Mat>;
   modify_image_saturation(saturation: number, inputImage: cv.Mat): Promise<cv.Mat>;
   
-  // Merger console
   adjust_image_colors_merge(
     exposure: number,
     temperature: number,
     tint: number,
     highlights: number,
-    shadows: number,
-    blacks: number,
-    whites: number,
+    shadow: number,
+    black: number,
+    white: number,
     contrast: number,
     saturation: number,
     vibrance: number,
-    inputImage: HTMLImageElement,
-    canvasRef: HTMLCanvasElement
-  ): Promise<void>;
+    inputImage?: cv.Mat
+  ): Promise<cv.Mat>;
   
   // Config History for undo and redo
   configHistotrypush(config: Config): void;
@@ -69,7 +67,7 @@ export interface HonchoEditor {
 }
 
 export interface Listener {
-  // onImageRendered(image: ImageBitmap): void;
-  // onGetRawImage(imageId: string, eventId: string): void;
-  // onSyncConfigs(imageId: string, eventId: string): Config[];
+  onImageRendered?(image: cv.Mat): void;
+  onSyncConfigs?(imageId: string, eventId: string, configs: Config[]): void;
+  onConfigChange?(config: Config): void;
 }
