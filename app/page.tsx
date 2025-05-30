@@ -5,12 +5,39 @@ import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
 import { Config } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
 
+const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number): cv.Mat => {
+  if (!mat || mat.empty()) {
+    console.error("Invalid or empty Mat");
+    return new cv.Mat();
+  }
+
+  const width = mat.cols;
+  const height = mat.rows;
+  const aspectRatio = width / height;
+  const targetAspectRatio = targetWidth / targetHeight;
+
+  let newWidth: number, newHeight: number;
+  if (aspectRatio > targetAspectRatio) {
+    newWidth = targetWidth;
+    newHeight = Math.round(targetWidth / aspectRatio);
+  } else {
+    newHeight = targetHeight;
+    newWidth = Math.round(targetHeight * aspectRatio);
+  }
+
+  const resizedMat = new cv.Mat();
+  const dsize = new cv.Size(newWidth, newHeight);
+  cv.resize(mat, resizedMat, dsize, 0, 0, cv.INTER_AREA);
+  return resizedMat;
+};
+
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const originalCanvasRef = useRef<HTMLCanvasElement>(null); // Separate ref for original canvas
   const editorRef = useRef<HonchoEditorClass | null>(null);
   const [isCvLoaded, setIsCvLoaded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [originalMat, setOriginalMat] = useState<cv.Mat | null>(null); // Store original cv.Mat
+  const [originalMat, setOriginalMat] = useState<cv.Mat | null>(null);
   const [adjustments, setAdjustments] = useState<Config>({
     Exposure: 0,
     Temperature: 0,
@@ -28,76 +55,64 @@ export default function Home() {
     setIsCvLoaded(true);
   }, []);
 
-  const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number): cv.Mat => {
-    if (!mat || mat.empty()) {
-      console.error("Invalid or empty Mat");
-      return new cv.Mat();
-    }
-
-    const width = mat.cols;
-    const height = mat.rows;
-
-    // Calculate aspect ratio
-    const aspectRatio = width / height;
-    const targetAspectRatio = targetWidth / targetHeight;
-
-    let newWidth: number, newHeight: number;
-
-    // Fit to width or height while preserving aspect ratio
-    if (aspectRatio > targetAspectRatio) {
-      // Image is wider than target, fit to width
-      newWidth = targetWidth;
-      newHeight = Math.round(targetWidth / aspectRatio);
-    } else {
-      // Image is taller than target, fit to height
-      newHeight = targetHeight;
-      newWidth = Math.round(targetHeight * aspectRatio);
-    }
-
-    // Create destination Mat
-    const resizedMat = new cv.Mat();
-    const dsize = new cv.Size(newWidth, newHeight);
-    cv.resize(mat, resizedMat, dsize, 0, 0, cv.INTER_AREA);
-
-    return resizedMat;
-  };
-
   // Handle file upload
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
 
-    const file = files[0];
-    const img = new Image();
-    img.onload = () => {
-      if (isCvLoaded) {
-        const mat = cv.imread(img);
-        const resizedMat = resizeMatToFit(mat, 360, 180);
-        setOriginalMat(mat); // Store cv.Mat
-        if (!editorRef.current) {
-          editorRef.current = new HonchoEditorClass(mat);
-          setAdjustments({
-            Exposure: editorRef.current.getConfig().Exposure,
-            Temperature: editorRef.current.getConfig().Temperature,
-            Tint: editorRef.current.getConfig().Tint,
-            Highlights: editorRef.current.getConfig().Highlights,
-            Shadow: editorRef.current.getConfig().Shadow,
-            Black: editorRef.current.getConfig().Black,
-            White: editorRef.current.getConfig().White,
-            Contrast: editorRef.current.getConfig().Contrast,
-            Saturation: editorRef.current.getConfig().Saturation,
-            Vibrance: editorRef.current.getConfig().Vibrance,
-          });
-        }
-        setImageLoaded(true);
+      // Clean up existing Mat
+      if (originalMat) {
+        originalMat.delete();
+        setOriginalMat(null);
       }
-    };
-    img.src = URL.createObjectURL(file);
-  }, [isCvLoaded]);
+
+      const file = files[0];
+      const img = new Image();
+      img.onload = () => {
+        if (isCvLoaded) {
+          const mat = cv.imread(img);
+          const resizedMat = resizeMatToFit(mat, 640, 360);
+          mat.delete(); // Clean up original high-res Mat
+          setOriginalMat(resizedMat);
+
+          if (!editorRef.current) {
+            editorRef.current = new HonchoEditorClass(resizedMat);
+            setAdjustments({
+              Exposure: editorRef.current.getConfig().Exposure,
+              Temperature: editorRef.current.getConfig().Temperature,
+              Tint: editorRef.current.getConfig().Tint,
+              Highlights: editorRef.current.getConfig().Highlights,
+              Shadow: editorRef.current.getConfig().Shadow,
+              Black: editorRef.current.getConfig().Black,
+              White: editorRef.current.getConfig().White,
+              Contrast: editorRef.current.getConfig().Contrast,
+              Saturation: editorRef.current.getConfig().Saturation,
+              Vibrance: editorRef.current.getConfig().Vibrance,
+            });
+          }
+          setImageLoaded(true);
+
+          // Render original image
+          if (originalCanvasRef.current) {
+            cv.imshow(originalCanvasRef.current, resizedMat);
+          }
+        }
+      };
+      img.src = URL.createObjectURL(file);
+    },
+    [isCvLoaded, originalMat]
+  );
 
   // Apply adjustments
   useEffect(() => {
-    if (editorRef.current && isCvLoaded && imageLoaded && canvasRef.current && originalMat) {
+    if (
+      editorRef.current &&
+      isCvLoaded &&
+      imageLoaded &&
+      canvasRef.current &&
+      originalMat
+    ) {
       editorRef.current
         .adjust_image_colors_merge(
           adjustments.Exposure,
@@ -113,12 +128,24 @@ export default function Home() {
           originalMat
         )
         .then((resultMat) => {
-          cv.imshow(canvasRef.current!, resultMat);
+          if (canvasRef.current) {
+            cv.imshow(canvasRef.current, resultMat);
+          }
           resultMat.delete(); // Clean up
         })
         .catch((err) => console.error("Adjustment error:", err));
     }
   }, [adjustments, isCvLoaded, imageLoaded, originalMat]);
+
+  // Clean up originalMat on unmount
+  useEffect(() => {
+    return () => {
+      if (originalMat) {
+        originalMat.delete();
+        setOriginalMat(null);
+      }
+    };
+  }, [originalMat]);
 
   const saveHistory = useCallback(() => {
     if (editorRef.current) {
@@ -145,7 +172,7 @@ export default function Home() {
   }, []);
 
   const handleUndo = useCallback(() => {
-    if (editorRef.current) {
+    if (editorRef.current && originalMat) {
       editorRef.current.undo().then(() => {
         setAdjustments({
           Exposure: editorRef.current!.getConfig().Exposure,
@@ -159,12 +186,34 @@ export default function Home() {
           Saturation: editorRef.current!.getConfig().Saturation,
           Vibrance: editorRef.current!.getConfig().Vibrance,
         });
+        // Reapply adjustments
+        editorRef.current!
+          .adjust_image_colors_merge(
+            editorRef.current!.getConfig().Exposure,
+            editorRef.current!.getConfig().Temperature,
+            editorRef.current!.getConfig().Tint,
+            editorRef.current!.getConfig().Highlights,
+            editorRef.current!.getConfig().Shadow,
+            editorRef.current!.getConfig().Black,
+            editorRef.current!.getConfig().White,
+            editorRef.current!.getConfig().Contrast,
+            editorRef.current!.getConfig().Saturation,
+            editorRef.current!.getConfig().Vibrance,
+            originalMat
+          )
+          .then((resultMat) => {
+            if (canvasRef.current) {
+              cv.imshow(canvasRef.current, resultMat);
+            }
+            resultMat.delete();
+          })
+          .catch((err) => console.error("Undo adjustment error:", err));
       });
     }
-  }, []);
+  }, [originalMat]);
 
   const handleRedo = useCallback(() => {
-    if (editorRef.current) {
+    if (editorRef.current && originalMat) {
       editorRef.current.redo().then(() => {
         setAdjustments({
           Exposure: editorRef.current!.getConfig().Exposure,
@@ -178,13 +227,38 @@ export default function Home() {
           Saturation: editorRef.current!.getConfig().Saturation,
           Vibrance: editorRef.current!.getConfig().Vibrance,
         });
+        // Reapply adjustments
+        editorRef.current!
+          .adjust_image_colors_merge(
+            editorRef.current!.getConfig().Exposure,
+            editorRef.current!.getConfig().Temperature,
+            editorRef.current!.getConfig().Tint,
+            editorRef.current!.getConfig().Highlights,
+            editorRef.current!.getConfig().Shadow,
+            editorRef.current!.getConfig().Black,
+            editorRef.current!.getConfig().White,
+            editorRef.current!.getConfig().Contrast,
+            editorRef.current!.getConfig().Saturation,
+            editorRef.current!.getConfig().Vibrance,
+            originalMat
+          )
+          .then((resultMat) => {
+            if (canvasRef.current) {
+              cv.imshow(canvasRef.current, resultMat);
+            }
+            resultMat.delete();
+          })
+          .catch((err) => console.error("Redo adjustment error:", err));
       });
     }
-  }, []);
+  }, [originalMat]);
 
-  const handleAdjustmentChange = useCallback((key: keyof Config, value: number) => {
-    setAdjustments((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const handleAdjustmentChange = useCallback(
+    (key: keyof Config, value: number) => {
+      setAdjustments((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
 
   return (
     <div>
@@ -239,7 +313,9 @@ export default function Home() {
                       max="5"
                       step="0.1"
                       value={adjustments.Exposure}
-                      onChange={(e) => handleAdjustmentChange("Exposure", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Exposure", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -253,7 +329,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Temperature}
-                      onChange={(e) => handleAdjustmentChange("Temperature", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Temperature", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -267,7 +345,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Tint}
-                      onChange={(e) => handleAdjustmentChange("Tint", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Tint", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -283,7 +363,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Highlights}
-                      onChange={(e) => handleAdjustmentChange("Highlights", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Highlights", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -297,7 +379,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Shadow}
-                      onChange={(e) => handleAdjustmentChange("Shadow", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Shadow", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -311,7 +395,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Black}
-                      onChange={(e) => handleAdjustmentChange("Black", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Black", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -325,7 +411,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.White}
-                      onChange={(e) => handleAdjustmentChange("White", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("White", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -341,7 +429,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Contrast}
-                      onChange={(e) => handleAdjustmentChange("Contrast", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Contrast", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -355,7 +445,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Saturation}
-                      onChange={(e) => handleAdjustmentChange("Saturation", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Saturation", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -369,7 +461,9 @@ export default function Home() {
                       max="100"
                       step="1"
                       value={adjustments.Vibrance}
-                      onChange={(e) => handleAdjustmentChange("Vibrance", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleAdjustmentChange("Vibrance", Number(e.target.value))
+                      }
                       onMouseUp={saveHistory}
                     />
                   </label>
@@ -379,20 +473,19 @@ export default function Home() {
             <div className="flex flex-col md:flex-row gap-6">
               <div>
                 <h3 className="text-sm">Original</h3>
-                {/* Render original image from originalMat */}
                 <canvas
-                  ref={(el) => {
-                    if (el && originalMat) {
-                      cv.imshow(el, originalMat);
-                    }
-                  }}
-                  width={360}
-                  height={180}
+                  ref={originalCanvasRef}
+                  width={640}
+                  height={360}
                 />
               </div>
               <div>
                 <h3 className="text-sm">Processed</h3>
-                <canvas ref={canvasRef} width={360} height={180} />
+                <canvas
+                  ref={canvasRef}
+                  width={640}
+                  height={360}
+                />
               </div>
             </div>
           </div>
