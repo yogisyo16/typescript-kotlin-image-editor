@@ -9,8 +9,8 @@ async function cleanAndExecuteAdjustment(
     currentImageEdit: cv.Mat,
     action: (image: cv.Mat, value: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
-    // Checking correct image result
-
+    // Checking correct action result
+    console.log("action : ", action)
     // New business logic will used
     let cleanUpCurrentExposure: cv.Mat | null = null;
     if (currentValue !== 0) {
@@ -39,9 +39,9 @@ async function cleanAndExecuteAdjustment(
 }
 
 function minusCvMat(a: cv.Mat, b: cv.Mat): cv.Mat {
-    // TODO please change to correct logic
-    // minus from a - b
-    return a;
+    const minusAlpha = new cv.Mat();
+    cv.subtract(a, b, minusAlpha);
+    return minusAlpha;
 }
 
 export default cleanAndExecuteAdjustment;
