@@ -12,6 +12,8 @@ async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> 
   const hsvChannels: cv.MatVector = new cv.MatVector();
   cv.split(originalHsvMat, hsvChannels);
   const hue = hsvChannels.get(0);
+  originalHsvMat.delete();
+  hsvChannels.delete();
 
   let factor = 1.0;
   let beta = 0.0;
@@ -28,43 +30,39 @@ async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> 
   // Multiply by factor using a Mat
   const factorMat = new cv.Mat(imageFloat.rows, imageFloat.cols, cv.CV_64FC3, new cv.Scalar(factor, factor, factor));
   cv.multiply(imageFloat, factorMat, imageFloat);
+  factorMat.delete();
 
   // Create a Mat for max value (255) instead of Scalar
   const maxMat = new cv.Mat(imageFloat.rows, imageFloat.cols, cv.CV_64FC3, new cv.Scalar(255, 255, 255));
   cv.min(imageFloat, maxMat, imageFloat);
   imageFloat.convertTo(originalMat, cv.CV_8UC3);
+  imageFloat.delete();
+  maxMat.delete();
 
   const adjustedMat = new cv.Mat();
   cv.convertScaleAbs(originalMat, adjustedMat, 1.0, beta);
 
   const finalHSV = new cv.Mat();
   cv.cvtColor(adjustedMat, finalHSV, cv.COLOR_BGR2HSV);
+  adjustedMat.delete();
+
   const finalHsvChannels = new cv.MatVector();
   cv.split(finalHSV, finalHsvChannels);
 
   const sTemp = finalHsvChannels.get(1);
   const vTemp = finalHsvChannels.get(2);
+  finalHsvChannels.delete();
+
 
   const mergedHsv = new cv.MatVector();
   mergedHsv.push_back(hue);
   mergedHsv.push_back(sTemp);
   mergedHsv.push_back(vTemp);
   cv.merge(mergedHsv, finalHSV);
-
-  cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
-
-  // Clean up
-  originalHsvMat.delete();
-  hsvChannels.delete();
-  imageFloat.delete();
-  factorMat.delete();
-  maxMat.delete();
-  adjustedMat.delete();
-  finalHsvChannels.delete();
+  
   mergedHsv.delete();
 
-  // debugging for config value
-  // console.log("Exposure Value: ", exposure);
+  cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
   return finalHSV;
 }
 

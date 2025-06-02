@@ -95,7 +95,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   async adjust(type: AdjustType, value: number): Promise<void> {
-    console.log("type: ", type, "value: ", value);
+    // console.log("type: ", type, "value: ", value);
     if (type == AdjustType.Exposure) {
         const currentExposure = this.config.Exposure;
 
