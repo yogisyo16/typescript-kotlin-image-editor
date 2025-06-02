@@ -23,32 +23,7 @@ export interface HonchoEditor {
   // Image getter
   onImageUpdate(inputImage: cv.Mat): cv.Mat;
 
-  // Modify image function
-  // modify_image_exposure(exposure: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_temperature(colorTemperature: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_tint(tint: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_highlights(highlights: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_shadows(shadows: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_blacks(blacks: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_whites(whites: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_contrast(contrast: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_vibrance(vibrance: number, inputImage: cv.Mat): Promise<cv.Mat>;
-  // modify_image_saturation(saturation: number, inputImage: cv.Mat): Promise<cv.Mat>;
   adjust(type: AdjustType, value: number): void;
-  
-  adjust_image_colors_merge(
-    exposure: number,
-    temperature: number,
-    tint: number,
-    highlights: number,
-    shadow: number,
-    black: number,
-    white: number,
-    contrast: number,
-    saturation: number,
-    vibrance: number,
-    inputImage?: cv.Mat
-  ): Promise<cv.Mat>;
   
   // Config History for undo and redo
   configHistotrypush(config: Config): void;

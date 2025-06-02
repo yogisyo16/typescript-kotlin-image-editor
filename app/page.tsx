@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Script from "next/script";
 import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
-import { Config, HonchoEditor } from "@/lib/HonchoEditor";
+import { AdjustType, Config, HonchoEditor, Listener } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
 
 const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number): cv.Mat => {
@@ -55,8 +55,21 @@ export default function Home() {
     setIsCvLoaded(true);
   }, []);
 
+  const listener = useRef<Listener>({
+    onImageRendered: function (image: cv.Mat): void {
+      if (canvasRef.current) cv.imshow(canvasRef.current, image);
+    },
+    onSyncConfigs: function (imageId: string, eventId: string, configs: Config[]): void {
+      throw new Error("Function not implemented.");
+    },
+    onConfigChange: function (config: Config): void {
+      setAdjustments(config);
+    }
+  });
+
   // Handle file upload
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files || files.length === 0) return;
 
@@ -77,19 +90,10 @@ export default function Home() {
           setOriginalMat(resizedMat);
 
           if (!editorRef.current) {
-            editorRef.current = new HonchoEditorClass(resizedMat);
-            setAdjustments({
-              Exposure: editorRef.current.getConfig().Exposure,
-              Temperature: editorRef.current.getConfig().Temperature,
-              Tint: editorRef.current.getConfig().Tint,
-              Highlights: editorRef.current.getConfig().Highlights,
-              Shadow: editorRef.current.getConfig().Shadow,
-              Black: editorRef.current.getConfig().Black,
-              White: editorRef.current.getConfig().White,
-              Contrast: editorRef.current.getConfig().Contrast,
-              Saturation: editorRef.current.getConfig().Saturation,
-              Vibrance: editorRef.current.getConfig().Vibrance,
-            });
+            editorRef.current = new HonchoEditorClass(
+              resizedMat,
+              listener.current
+            );
           }
           setImageLoaded(true);
 
@@ -100,156 +104,33 @@ export default function Home() {
         }
       };
       img.src = URL.createObjectURL(file);
-    }, [isCvLoaded, originalMat]);
-
-  // Apply adjustments
-  useEffect(() => {
-    if (
-      editorRef.current &&
-      isCvLoaded &&
-      imageLoaded &&
-      canvasRef.current &&
-      originalMat
-    ) {
-      editorRef.current
-        .adjust_image_colors_merge(
-          adjustments.Exposure,
-          adjustments.Temperature,
-          adjustments.Tint,
-          adjustments.Highlights,
-          adjustments.Shadow,
-          adjustments.Black,
-          adjustments.White,
-          adjustments.Contrast,
-          adjustments.Saturation,
-          adjustments.Vibrance,
-          originalMat
-        )
-        .then((resultMat) => {
-          if (canvasRef.current) {
-            cv.imshow(canvasRef.current, resultMat);
-          }
-          resultMat.delete(); // Clean up
-        })
-        .catch((err) => console.error("Adjustment error:", err));
-    }
-  }, [adjustments, isCvLoaded, imageLoaded, originalMat]);
-
-  // Clean up originalMat on unmount
-  useEffect(() => {
-    return () => {
-      if (originalMat) {
-        originalMat.delete();
-        setOriginalMat(null);
-      }
-    };
-  }, [originalMat]);
-
-  const saveHistory = useCallback(() => {
-    if (editorRef.current) {
-      editorRef.current.configHistotrypush();
-    }
-  }, []);
+    },
+    [isCvLoaded, originalMat]
+  );
 
   const handleReset = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.reset();
-      setAdjustments({
-        Exposure: editorRef.current.getConfig().Exposure,
-        Temperature: editorRef.current.getConfig().Temperature,
-        Tint: editorRef.current.getConfig().Tint,
-        Highlights: editorRef.current.getConfig().Highlights,
-        Shadow: editorRef.current.getConfig().Shadow,
-        Black: editorRef.current.getConfig().Black,
-        White: editorRef.current.getConfig().White,
-        Contrast: editorRef.current.getConfig().Contrast,
-        Saturation: editorRef.current.getConfig().Saturation,
-        Vibrance: editorRef.current.getConfig().Vibrance,
-      });
     }
-  }, []);
+  }, [editorRef]);
 
   const handleUndo = useCallback(() => {
-    if (editorRef.current && originalMat) {
-      editorRef.current.undo().then(() => {
-        setAdjustments({
-          Exposure: editorRef.current!.getConfig().Exposure,
-          Temperature: editorRef.current!.getConfig().Temperature,
-          Tint: editorRef.current!.getConfig().Tint,
-          Highlights: editorRef.current!.getConfig().Highlights,
-          Shadow: editorRef.current!.getConfig().Shadow,
-          Black: editorRef.current!.getConfig().Black,
-          White: editorRef.current!.getConfig().White,
-          Contrast: editorRef.current!.getConfig().Contrast,
-          Saturation: editorRef.current!.getConfig().Saturation,
-          Vibrance: editorRef.current!.getConfig().Vibrance,
-        });
-        // Reapply adjustments
-        editorRef.current!
-          .adjust_image_colors_merge(
-            editorRef.current!.getConfig().Exposure,
-            editorRef.current!.getConfig().Temperature,
-            editorRef.current!.getConfig().Tint,
-            editorRef.current!.getConfig().Highlights,
-            editorRef.current!.getConfig().Shadow,
-            editorRef.current!.getConfig().Black,
-            editorRef.current!.getConfig().White,
-            editorRef.current!.getConfig().Contrast,
-            editorRef.current!.getConfig().Saturation,
-            editorRef.current!.getConfig().Vibrance,
-            originalMat
-          )
-          .then((resultMat) => {
-            if (canvasRef.current) {
-              cv.imshow(canvasRef.current, resultMat);
-            }
-            resultMat.delete();
-          })
-          .catch((err) => console.error("Undo adjustment error:", err));
-      });
+    if (editorRef.current) {
+      editorRef.current.undo();
     }
-  }, [originalMat]);
+  }, [editorRef]);
 
   const handleRedo = useCallback(() => {
-    if (editorRef.current && originalMat) {
-      editorRef.current.redo().then(() => {
-        setAdjustments({
-          Exposure: editorRef.current!.getConfig().Exposure,
-          Temperature: editorRef.current!.getConfig().Temperature,
-          Tint: editorRef.current!.getConfig().Tint,
-          Highlights: editorRef.current!.getConfig().Highlights,
-          Shadow: editorRef.current!.getConfig().Shadow,
-          Black: editorRef.current!.getConfig().Black,
-          White: editorRef.current!.getConfig().White,
-          Contrast: editorRef.current!.getConfig().Contrast,
-          Saturation: editorRef.current!.getConfig().Saturation,
-          Vibrance: editorRef.current!.getConfig().Vibrance,
-        });
-        // Reapply adjustments
-        editorRef.current!
-          .adjust_image_colors_merge(
-            editorRef.current!.getConfig().Exposure,
-            editorRef.current!.getConfig().Temperature,
-            editorRef.current!.getConfig().Tint,
-            editorRef.current!.getConfig().Highlights,
-            editorRef.current!.getConfig().Shadow,
-            editorRef.current!.getConfig().Black,
-            editorRef.current!.getConfig().White,
-            editorRef.current!.getConfig().Contrast,
-            editorRef.current!.getConfig().Saturation,
-            editorRef.current!.getConfig().Vibrance,
-            originalMat
-          )
-          .then((resultMat) => {
-            if (canvasRef.current) {
-              cv.imshow(canvasRef.current, resultMat);
-            }
-            resultMat.delete();
-          })
-          .catch((err) => console.error("Redo adjustment error:", err));
-      });
+    if (editorRef.current) {
+      editorRef.current.redo();
     }
-  }, [originalMat]);
+  }, [editorRef]);
+
+  const saveHistory = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.configHistotrypush(adjustments);
+    }
+  }, [editorRef]);
 
   const handleAdjustmentChange = useCallback(
     (key: keyof Config, value: number) => {
