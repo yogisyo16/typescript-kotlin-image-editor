@@ -28,23 +28,10 @@ export interface HonchoEditor {
   // Config History for undo and redo
   configHistotrypush(config: Config): void;
   
-  // // Config setter
-  // setShadow(shadow: number): void;
-  // setTemp(temp: number): void;
-  // setTint(tint: number): void;
-
   // Config undo - redo - reset
   undo(): Promise<void>;
   redo(): Promise<void>;
   reset(): void;
-
-  // // Config applier
-  // applyShadow(shadow: number): void;
-  // applyTemp(temp: number): void;
-  // applyTint(tint: number): void;
-  // sendConfigServer(): void;
-  // getFlattenConfig(configs: Config[]): Config;
-  // applyOpenCV(config: Config): void;
 }
 
 export interface Listener {

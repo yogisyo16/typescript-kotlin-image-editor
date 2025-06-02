@@ -304,3 +304,5 @@ async function modifyImageTint(tint: number, inputImage: cv.Mat): Promise<cv.Mat
 
   return adjustedMat;
 }
+
+export default modifyImageTint;

@@ -2,6 +2,7 @@ import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
 import cleanAndExecuteAdjustment from "@/lib/adjustExt/cleanAdjust";
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
+import modifyImageTint from "@/lib/adjustImage/tintAdjust";
 import cv from "@techstark/opencv-js";
 import { useState } from "react";
 
@@ -95,9 +96,7 @@ export class HonchoEditorClass implements HonchoEditor {
         const currentExposure = this.config.Exposure;
 
         if (currentExposure !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(currentExposure, value, this.inputImage, this.currentImageEdit, (image, number) => {
-              return modifyImageExposure(image, number);
-          });
+          this.currentImageEdit = await modifyImageExposure(this.inputImage, value);
         }
         // Update value exposure publish to UI
         this.config.Exposure = value;
@@ -105,9 +104,7 @@ export class HonchoEditorClass implements HonchoEditor {
         const currentTemp = this.config.Temperature;
 
         if (currentTemp !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(currentTemp, value, this.inputImage, this.currentImageEdit, (image, number) => {
-              return modifyImageTemperature(image, number);
-          });
+          this.currentImageEdit = await modifyImageTemperature(this.inputImage, value);
         }
 
         this.config.Temperature = value;
@@ -211,19 +208,5 @@ export class HonchoEditorClass implements HonchoEditor {
     this.config.Vibrance = 0;
 
     // mat.delete();
-  }
-
-  sendConfigServer(): void {
-    if (this.listener) {
-      // this.listener.onSyncConfigs("image1", "event1", this.configHistory);
-    }
-  }
-
-  getFlattenConfig(configs: Config): Config {
-    return configs;
-  }
-
-  applyOpenCV(config: Config): void {
-    return ;
   }
 }
