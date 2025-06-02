@@ -96,16 +96,14 @@ export class HonchoEditorClass implements HonchoEditor {
         const currentExposure = this.config.Exposure;
 
         if (currentExposure !== value) {
-          this.currentImageEdit = await modifyImageExposure(this.inputImage, value);
+          this.currentImageEdit = await cleanAndExecuteAdjustment(currentExposure, value, this.inputImage, this.currentImageEdit, (image, number) => {
+              return modifyImageExposure(image, number);
+          });
         }
         // Update value exposure publish to UI
         this.config.Exposure = value;
     } else if (type == AdjustType.Temperature) {
         const currentTemp = this.config.Temperature;
-
-        if (currentTemp !== value) {
-          this.currentImageEdit = await modifyImageTemperature(this.inputImage, value);
-        }
 
         this.config.Temperature = value;
     }
