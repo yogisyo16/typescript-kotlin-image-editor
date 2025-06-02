@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Script from "next/script";
 import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
-import { Config } from "@/lib/HonchoEditor";
+import { Config, HonchoEditor } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
 
 const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number): cv.Mat => {
@@ -33,8 +33,8 @@ const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number):
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const originalCanvasRef = useRef<HTMLCanvasElement>(null); // Separate ref for original canvas
-  const editorRef = useRef<HonchoEditorClass | null>(null);
+  const originalCanvasRef = useRef<HTMLCanvasElement>(null);
+  const editorRef = useRef<HonchoEditor | null>(null);
   const [isCvLoaded, setIsCvLoaded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [originalMat, setOriginalMat] = useState<cv.Mat | null>(null);
@@ -56,8 +56,7 @@ export default function Home() {
   }, []);
 
   // Handle file upload
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files || files.length === 0) return;
 
@@ -69,11 +68,12 @@ export default function Home() {
 
       const file = files[0];
       const img = new Image();
+
       img.onload = () => {
         if (isCvLoaded) {
           const mat = cv.imread(img);
           const resizedMat = resizeMatToFit(mat, 640, 360);
-          mat.delete(); // Clean up original high-res Mat
+          mat.delete(); // Clean up original high-res Mat// will comment this after doing unit test later on after this projects
           setOriginalMat(resizedMat);
 
           if (!editorRef.current) {
@@ -100,9 +100,7 @@ export default function Home() {
         }
       };
       img.src = URL.createObjectURL(file);
-    },
-    [isCvLoaded, originalMat]
-  );
+    }, [isCvLoaded, originalMat]);
 
   // Apply adjustments
   useEffect(() => {
@@ -285,20 +283,17 @@ export default function Home() {
                 <div className="flex gap-2 mt-2">
                   <button
                     className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
-                    onClick={handleReset}
-                  >
+                    onClick={handleReset}>
                     Reset
                   </button>
                   <button
                     className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
-                    onClick={handleUndo}
-                  >
+                    onClick={handleUndo}>
                     Undo
                   </button>
                   <button
                     className="p-2 bg-blue-500 text-white rounded hover:cursor-pointer hover:scale-125"
-                    onClick={handleRedo}
-                  >
+                    onClick={handleRedo}>
                     Redo
                   </button>
                 </div>
@@ -366,8 +361,7 @@ export default function Home() {
                       onChange={(e) =>
                         handleAdjustmentChange("Highlights", Number(e.target.value))
                       }
-                      onMouseUp={saveHistory}
-                    />
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -382,8 +376,7 @@ export default function Home() {
                       onChange={(e) =>
                         handleAdjustmentChange("Shadow", Number(e.target.value))
                       }
-                      onMouseUp={saveHistory}
-                    />
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>

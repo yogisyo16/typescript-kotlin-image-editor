@@ -1,13 +1,13 @@
 import React from "react";
-import { HonchoEditor, Config, Listener } from "@/lib/HonchoEditor";
+import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
 import { useState, MouseEvent } from "react";
-import { debounce } from "lodash";
+import { debounce } from "lodash"; // Not yet to be used
 
 // Hook to manage and setup OpenCV
 export function useOpenCV() {
-  const imgRef = React.createRef<HTMLImageElement>();
-  const canvasRef = React.createRef<HTMLCanvasElement>();
+  // const imgRef = React.createRef<HTMLImageElement>();
+  // const canvasRef = React.createRef<HTMLCanvasElement>();
   const [isCvLoaded, setIsCvLoaded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -15,35 +15,34 @@ export function useOpenCV() {
     setIsCvLoaded(true);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const files = e.target.files;
+  //   if (!files || files.length === 0) return;
 
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.readyState === FileReader.DONE && imgRef.current) {
-        imgRef.current.src = evt.target.result as string;
-        setImageLoaded(true);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+  //   const file = files[0];
+  //   const reader = new FileReader();
+  //   reader.onload = (evt) => {
+  //     if (evt.target?.readyState === FileReader.DONE && imgRef.current) {
+  //       imgRef.current.src = evt.target.result as string;
+  //       setImageLoaded(true);
+  //     }
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
 
   return {
-    imgRef,
-    canvasRef,
     isCvLoaded,
     imageLoaded,
-    onOpenCVLoad,
-    handleFileChange,
+    onOpenCVLoad
   };
 }
 
 export class HonchoEditorClass implements HonchoEditor {
+  // For any Input convert into cv.Mat first
   private inputImage: cv.Mat;
   private listener: Listener | null = null;
-  public config: Config = {
+  // Config variable Value
+  private config: Config = {
     Exposure: 0,
     Temperature: 0,
     Tint: 0,
@@ -55,13 +54,15 @@ export class HonchoEditorClass implements HonchoEditor {
     Saturation: 0,
     Vibrance: 0,
   };
+  // For undo Redo
   private configHistory: Config[] = [];
-  private currentHistoryIndex: number = -1;
   private redoStack: Config[] = [];
+  // private currentHistoryIndex: number = -1;
 
-  constructor(inputImage: cv.Mat) {
-    this.inputImage = inputImage.clone(); // Clone to avoid modifying the input
+  constructor(inputImage: cv.Mat, listener: Listener) {
+    this.inputImage = inputImage.clone();
     this.configHistory.push({ ...this.config });
+    this.listener = listener;
   }
 
   // Getter for config
@@ -79,12 +80,18 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   consume(serverConfig: Config[]): string {
-    
-    return "Configs consumed";
+    throw Error("Not implemented");
+    // return "Configs consumed";
   }
 
   onImageUpdate(inputImage: cv.Mat): cv.Mat {
     return inputImage.clone(); // Clone to avoid modifying the input
+  }
+
+  adjust(type: AdjustType, value: number): void {
+    if (type == AdjustType.Exposure) {
+      this.modify_image_exposure()
+    }
   }
 
   // -- From kotlin to use bitmap, is not used for web (SEMANGAT GES yang andro dan ios)
@@ -94,9 +101,9 @@ export class HonchoEditorClass implements HonchoEditor {
   //   this.listener?.onImageRendered(bitmap);
   // }
 
-  async modify_image_exposure(exposure: number, inputImage: cv.Mat): Promise<cv.Mat> {
+  async modify_image_exposure(exposure: number): Promise<cv.Mat> {
     this.config.Exposure = exposure;
-    const originalMat = inputImage.clone();
+    const originalMat = this.inputImage.clone();
     
     // Ensure input is 3 channels (BGR) to avoid RGBA issues
     cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
@@ -2114,7 +2121,7 @@ export class HonchoEditorClass implements HonchoEditor {
       // Apply adjustments sequentially
       if (exposure !== 0) {
         this.config.Exposure = exposure;
-        src = await this.modify_image_exposure(this.config.Exposure, src);
+        src = await this.modify_image_exposure(this.config.Exposure);
       }
 
       if (temperature !== 0) {
@@ -2263,7 +2270,20 @@ export class HonchoEditorClass implements HonchoEditor {
 
   reset(): void {
     // const mat = cv.imread(this.imgElement);
-    this.configHistory = [];
+    this.configHistory = [
+      {
+        Exposure: 0,
+        Temperature: 0,
+        Tint: 0,
+        Highlights: 0,
+        Shadow: 0,
+        Black: 0,
+        White: 0,
+        Contrast: 0,
+        Saturation: 0,
+        Vibrance: 0,
+      },
+    ];
     this.redoStack = [];
     this.config.Exposure = 0;
     this.config.Temperature = 0;
