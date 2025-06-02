@@ -318,3 +318,5 @@ async function modifyImageContrast(src: cv.Mat, contrastScore: number): Promise<
     return afterRedBoostAdj;
   }
 }
+
+export default modifyImageContrast;

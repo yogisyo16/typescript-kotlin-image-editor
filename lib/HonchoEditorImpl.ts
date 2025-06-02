@@ -78,10 +78,6 @@ export class HonchoEditorClass implements HonchoEditor {
     this.config = { ...this.config, [key]: value };
   }
 
-  setListener(listener: Listener) {
-    this.listener = listener;
-  }
-
   consume(serverConfig: Config[]): string {
     throw Error("Not implemented");
     // return "Configs consumed";
@@ -96,9 +92,7 @@ export class HonchoEditorClass implements HonchoEditor {
         const currentExposure = this.config.Exposure;
 
         if (currentExposure !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(currentExposure, value, this.inputImage, this.currentImageEdit, (image, number) => {
-              return modifyImageExposure(image, number);
-          });
+          this.currentImageEdit = await cleanAndExecuteAdjustment(currentExposure, value, this.inputImage, this.currentImageEdit, modifyImageExposure);
         }
         // Update value exposure publish to UI
         this.config.Exposure = value;
@@ -110,7 +104,10 @@ export class HonchoEditorClass implements HonchoEditor {
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-}
+    this.configHistotrypush();
+  }
+
+  
 
   configHistotrypush() {
     // Here is to save configHistory after initial state

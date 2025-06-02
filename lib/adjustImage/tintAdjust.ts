@@ -254,9 +254,9 @@ function boostGreen(tintScale: number, originalMat: cv.Mat, lumScalingFactor: cv
 }
 
 // -- Implement adjustment Tint
-async function modifyImageTint(tint: number, inputImage: cv.Mat): Promise<cv.Mat> {
+async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
   const labImage = new cv.Mat();
-  const originalMat = inputImage.clone();
+  const originalMat = src.clone();
   tint = tint / 10;
   cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
   cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);

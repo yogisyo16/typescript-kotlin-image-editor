@@ -12,33 +12,28 @@ async function cleanAndExecuteAdjustment(
     // Checking correct action result
     console.log("action : ", action)
     // New business logic will used
-    let cleanUpCurrentExposure: cv.Mat | null = null;
+    let deltaMat: cv.Mat | null = null;
     if (currentValue !== 0) {
         // Get adjust value from original
         const currentAdjustImage = await action(originalImage, currentValue);
+        
+        currentAdjustImage.convertTo(currentImageEdit, cv.CV_16SC3);
 
-        // TODO check this code if correct to remove alpha
-        const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
-        currentAdjustImage.delete();
-        originalImage.delete();
-
-        // let remove expousre value from currentImageEdit
-        cleanUpCurrentExposure = minusCvMat(currentImageEdit, currentValueImage);
-        currentValueImage.delete();
+        deltaMat = deltaValueCount(currentAdjustImage, currentImageEdit);
     } else {
         // no need to clean up, just use current image edit, since the value is 0
-        cleanUpCurrentExposure = currentImageEdit;
+        deltaMat = currentImageEdit;
     }
 
     // now imageEdit already 0 exposure and we add with new exposure value
-    const resultExposureImage = await action(cleanUpCurrentExposure, newValue);
-    cleanUpCurrentExposure.delete();
+    const resultExposureImage = await action(deltaMat, newValue);
+    deltaMat.delete();
 
     // save to currentImageEdit and publish to UI
     return resultExposureImage.clone();
 }
 
-function minusCvMat(a: cv.Mat, b: cv.Mat): cv.Mat {
+function deltaValueCount(a: cv.Mat, b: cv.Mat): cv.Mat {
     const minusAlpha = new cv.Mat();
     cv.subtract(a, b, minusAlpha);
     return minusAlpha;
