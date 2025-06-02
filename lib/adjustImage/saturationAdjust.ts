@@ -115,3 +115,5 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
     throw error;
   }
 }
+
+export default modifyImageSaturation;

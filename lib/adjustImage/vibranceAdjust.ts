@@ -53,7 +53,7 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       // Clone input image
       const srcClone = src.clone();
       if (!srcClone || srcClone.empty()) {
-          throw new Error("Input image is empty");
+        throw new Error("Input image is empty");
       }
 
       // Convert to BGR and then to Lab
@@ -157,3 +157,5 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       throw error;
   }
 }
+
+export default modifyImageVibrance;

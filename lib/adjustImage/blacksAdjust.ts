@@ -60,3 +60,5 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
     throw error;
   }
 }
+
+export default modifyImageBlacks;

@@ -111,6 +111,18 @@ export default function Home() {
   const handleReset = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.reset();
+      setAdjustments({
+        Exposure: 0,
+        Temperature: 0,
+        Tint: 0,
+        Highlights: 0,
+        Shadow: 0,
+        Black: 0,
+        White: 0,
+        Contrast: 0,
+        Saturation: 0,
+        Vibrance: 0,
+      });
     }
   }, [editorRef]);
 

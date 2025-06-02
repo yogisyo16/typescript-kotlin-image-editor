@@ -1,14 +1,14 @@
 import cv from "@techstark/opencv-js";
 
-async function modifyImageShadows(shadows: number, inputImage: cv.Mat): Promise<cv.Mat> {
+async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat> {
   try {
-    const src = inputImage.clone();
-    if (!src || src.empty()) {
+    const srcClone = src.clone();
+    if (!srcClone || srcClone.empty()) {
       throw new Error("Input image is empty");
     }
 
     const originalImage = new cv.Mat();
-    cv.cvtColor(src, originalImage, cv.COLOR_RGB2BGR);
+    cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
 
     // Map shadows (0 to 100) to a darkening factor (1 to 0)
     const shadowFactor = 1 - (shadows / -100); // 1 (no change) to 0 (max darkening)
@@ -49,3 +49,5 @@ async function modifyImageShadows(shadows: number, inputImage: cv.Mat): Promise<
     throw error;
   }
 }
+
+export default modifyImageShadows;

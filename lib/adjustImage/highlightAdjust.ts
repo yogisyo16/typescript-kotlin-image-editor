@@ -93,3 +93,5 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
     throw error;
   }
 }
+
+export default modifyImageHighlights;

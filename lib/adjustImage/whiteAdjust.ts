@@ -445,3 +445,5 @@ async function modifyImageWhites(src: cv.Mat, whites: number): Promise<cv.Mat> {
     return adjustedHSV;
   }
 }
+
+export default modifyImageWhites;

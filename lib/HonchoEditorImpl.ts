@@ -3,6 +3,13 @@ import cleanAndExecuteAdjustment from "@/lib/adjustExt/cleanAdjust";
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
 import modifyImageTint from "@/lib/adjustImage/tintAdjust";
+import modifyImageHighlights from "@/lib/adjustImage/highlightAdjust";
+import modifyImageShadows from "@/lib/adjustImage/shadowsAdjust";
+import modifyImageBlacks from "@/lib/adjustImage/blacksAdjust";
+import modifyImageWhites from "@/lib/adjustImage/whiteAdjust";
+import modifyImageContrast from "@/lib/adjustImage/contrastAdjust";
+import modifyImageSaturation from "@/lib/adjustImage/saturationAdjust";
+import modifyImageVibrance from "@/lib/adjustImage/vibranceAdjust";
 import cv from "@techstark/opencv-js";
 import { useState } from "react";
 
@@ -88,6 +95,7 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   async adjust(type: AdjustType, value: number): Promise<void> {
+    console.log("type: ", type, "value: ", value);
     if (type == AdjustType.Exposure) {
         const currentExposure = this.config.Exposure;
 
@@ -97,17 +105,80 @@ export class HonchoEditorClass implements HonchoEditor {
         // Update value exposure publish to UI
         this.config.Exposure = value;
     } else if (type == AdjustType.Temperature) {
-        const currentTemp = this.config.Temperature;
+        const currentTemperature = this.config.Temperature;
 
+        if (currentTemperature !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(currentTemperature, value, this.inputImage, this.currentImageEdit, modifyImageTemperature);
+        }
         this.config.Temperature = value;
+    } else if (type == AdjustType.Tint) {
+        const currentTint = this.config.Tint;
+
+        if (currentTint !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(currentTint, value, this.inputImage, this.currentImageEdit, modifyImageTint);
+        }
+
+        this.config.Tint = value;
+    } else if (type == AdjustType.Highlights) {
+        const currentHighlights = this.config.Highlights;
+
+        if (currentHighlights !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, value, this.inputImage, this.currentImageEdit, modifyImageHighlights);
+        }
+
+        this.config.Highlights = value;
+    } else if (type == AdjustType.Shadow) {
+        const currentShadow = this.config.Shadow;
+
+        if (currentShadow !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, value, this.inputImage, this.currentImageEdit, modifyImageShadows);
+        }
+
+        this.config.Shadow = value;
+    } else if (type == AdjustType.Blacks) {
+        const currentBlack = this.config.Black;
+
+        if (currentBlack !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Black, value, this.inputImage, this.currentImageEdit, modifyImageBlacks);
+        }
+
+        this.config.Black = value;
+    } else if (type == AdjustType.Whites) {
+        const currentWhite = this.config.White;
+
+        if (currentWhite !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.White, value, this.inputImage, this.currentImageEdit, modifyImageWhites);
+        }
+
+        this.config.White = value;
+    } else if (type == AdjustType.Contrast) {
+        const currentContrast = this.config.Contrast;
+
+        if (currentContrast !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, value, this.inputImage, this.currentImageEdit, modifyImageContrast);
+        }
+
+        this.config.Contrast = value;
+    } else if (type == AdjustType.Vibrance) {
+        const currentVibrance = this.config.Vibrance;
+
+        if (currentVibrance !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, value, this.inputImage, this.currentImageEdit, modifyImageVibrance);
+        }
+
+        this.config.Vibrance = value;
+    } else if (type == AdjustType.Saturation) {
+        const currentSaturation = this.config.Saturation;
+
+        if (currentSaturation !== value) {
+          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, value, this.inputImage, this.currentImageEdit, modifyImageSaturation);
+        }
+        this.config.Saturation = value;
     }
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-    this.configHistotrypush();
   }
-
-  
 
   configHistotrypush() {
     // Here is to save configHistory after initial state
@@ -201,6 +272,9 @@ export class HonchoEditorClass implements HonchoEditor {
     this.config.Contrast = 0;
     this.config.Saturation = 0;
     this.config.Vibrance = 0;
+
+    this.listener?.onImageRendered(this.inputImage);
+    this.listener?.onConfigChange(this.config);
 
     // mat.delete();
   }

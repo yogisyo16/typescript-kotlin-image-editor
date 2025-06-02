@@ -10,27 +10,28 @@ async function cleanAndExecuteAdjustment(
     action: (image: cv.Mat, value: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
     // Checking correct action result
-    console.log("action : ", action)
+    console.log("action : ", action);
     // New business logic will used
     let deltaMat: cv.Mat | null = null;
-    if (currentValue !== 0) {
+    console.log("currentValue : ", currentValue);
+    console.log("newValue : ", newValue);
+    
+    if (newValue !== 0) {
         // Get adjust value from original
-        const currentAdjustImage = await action(originalImage, currentValue);
+        const currentAdjustImage = await action(originalImage, newValue);
         
-        currentAdjustImage.convertTo(currentImageEdit, cv.CV_16SC3);
-
-        deltaMat = deltaValueCount(currentAdjustImage, currentImageEdit);
+        deltaMat = currentAdjustImage.clone();
+        currentAdjustImage.delete();
     } else {
         // no need to clean up, just use current image edit, since the value is 0
         deltaMat = currentImageEdit;
     }
 
     // now imageEdit already 0 exposure and we add with new exposure value
-    const resultExposureImage = await action(deltaMat, newValue);
+    const resultTotalMat = deltaMat.clone();
     deltaMat.delete();
 
-    // save to currentImageEdit and publish to UI
-    return resultExposureImage.clone();
+    return resultTotalMat.clone();
 }
 
 function deltaValueCount(a: cv.Mat, b: cv.Mat): cv.Mat {
