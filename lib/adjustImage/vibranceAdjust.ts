@@ -130,7 +130,7 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
 
       // Clean up
-      src.delete();
+      srcClone.delete();
       originalImage.delete();
       labImage.delete();
       labChannels.delete();

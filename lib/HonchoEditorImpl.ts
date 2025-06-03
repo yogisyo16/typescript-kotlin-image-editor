@@ -96,6 +96,8 @@ export class HonchoEditorClass implements HonchoEditor {
 
   async adjust(type: AdjustType, value: number): Promise<void> {
     // console.log("type: ", type, "value: ", value);
+    let exposureImage = new cv.Mat();
+    let temperatureImage = new cv.Mat();
     if (type == AdjustType.Exposure) {
         const currentExposure = this.config.Exposure;
 
@@ -175,6 +177,8 @@ export class HonchoEditorClass implements HonchoEditor {
         }
         this.config.Saturation = value;
     }
+
+    // this.currentImageEdit = exposureImage;
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);

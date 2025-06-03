@@ -80,7 +80,7 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
     const finalImage = new cv.Mat();
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
 
-    src.delete();
+    srcClone.delete();
     originalImage.delete();
     hsvImage.delete();
     channels.delete();

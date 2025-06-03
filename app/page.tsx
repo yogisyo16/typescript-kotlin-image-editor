@@ -264,7 +264,7 @@ export default function Home() {
                       step="1"
                       value={adjustments.Shadow}
                       onChange={(e) =>
-                        handleAdjustmentChange(AdjustType.Highlights, Number(e.target.value))
+                        handleAdjustmentChange(AdjustType.Shadow, Number(e.target.value))
                       }/>
                   </label>
                 </div>

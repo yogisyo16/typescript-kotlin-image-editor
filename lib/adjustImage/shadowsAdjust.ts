@@ -36,7 +36,7 @@ async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat>
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
 
     // Clean up
-    src.delete();
+    srcClone.delete();
     originalImage.delete();
     hsvImage.delete();
     channels.delete();
