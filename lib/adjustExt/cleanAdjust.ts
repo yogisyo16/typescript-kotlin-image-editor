@@ -18,6 +18,8 @@ async function cleanAndExecuteAdjustment(
         const currentAdjustImage = await action(originalImage, newValue); // This is the image with ONLY the current 'newValue' adjustment applied to 'originalImage'
 
         // --- START: DELTA CALCULATION AND LOGGING ---
+        // for some reason originalimage and currentAdjustImage are empty
+        // is not working yet on development
         if (!originalImage.empty() && !currentAdjustImage.empty()) {
             let originalImageFloat: cv.Mat | null = null;
             let currentAdjustImageFloat: cv.Mat | null = null;
