@@ -1,7 +1,7 @@
 import cv from "@techstark/opencv-js";
 
-// cleanAndExecuteAdjustment to remove the alpha from currentImageEdit
-// and apply with new value apha
+// cleanAndExecuteAdjustment to remove the delta from currentImageEdit
+// and apply with new value delta
 async function cleanAndExecuteAdjustment(
     currentValue: number,
     newValue: number,
@@ -20,6 +20,10 @@ async function cleanAndExecuteAdjustment(
         // --- START: DELTA CALCULATION AND LOGGING ---
         // for some reason originalimage and currentAdjustImage are empty
         // is not working yet on development
+        // TODO : Looking for best implementation on business logic. Looking for other ways.
+        // but keep on mind the main LOGIC should be like this
+        // originalImage(matrix/cv.Mat) - currentAdjustImage(matrix/cv.Mat)
+        // that's it!
         if (!originalImage.empty() && !currentAdjustImage.empty()) {
             let originalImageFloat: cv.Mat | null = null;
             let currentAdjustImageFloat: cv.Mat | null = null;
@@ -121,13 +125,11 @@ async function cleanAndExecuteAdjustment(
     console.log("resultingImageForThisStep data (first 10 values as Uint8): ", resultingImageForThisStep.data.slice(0,10));
     
     const finalOutputMat = resultingImageForThisStep.clone();
-    resultingImageForThisStep.delete(); 
+    resultingImageForThisStep.delete();
 
     return finalOutputMat;
 }
 
-// This function is not directly used in cleanAndExecuteAdjustment's main path
-// but is kept as it was in your original file.
 function deltaValueCount(a: cv.Mat, b: cv.Mat): cv.Mat {
     const minusAlpha = new cv.Mat();
     // cv.divide(a, b, minusAlpha); // This line seems out of place if the goal is subtraction
