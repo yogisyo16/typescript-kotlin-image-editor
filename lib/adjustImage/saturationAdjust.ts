@@ -93,7 +93,7 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
 
     if (saturation < 0) {
       const hueShiftedImage = hueShiftedProcess(adjustedImage);
-      adjustedImage.delete();
+      // adjustedImage.delete();
       adjustedImage = hueShiftedImage;
     }
 

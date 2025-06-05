@@ -111,39 +111,12 @@ function boostMagenta(tintScale: number, originalMat: cv.Mat, lumScalingFactor: 
     originalMat.convertTo(originalMat, cv.CV_8U);
     cleanUp.push(finalChannels as any, curRedChannels, curGreenChannels);
 
-    // Clean up
-    redScale.delete();
-    greenScale.delete();
-    blueScale.delete();
-    redAdjustment.delete();
-    greenAdjustment.delete();
-    blueAdjustment.delete();
-    redScalarMat.delete();
-    greenScalarMat.delete();
-    blueScalarMat.delete();
-    ch0.delete();
-    ch1.delete();
-    ch2.delete();
-    curRedChannels.delete();
-    curGreenChannels.delete();
-    labMat.delete();
-    bChannel.delete();
-    bNorm.delete();
-    bLabScalingFactor.delete();
-    bScale.delete();
-    bAdjustment.delete();
-    bScalarMat.delete();
-    scalarMat255.delete();
-    matVector.delete();
-    labChannels.delete();
-    finalChannels.delete();
-
     return originalMat;
   } catch (error) {
     console.log(error);
     return originalMat;
-  } finally {
-    cleanUp.forEach((mat) => mat.delete());
+  // } finally {
+  //   cleanUp.forEach((mat) => mat.delete());
   }
 }
 
@@ -251,8 +224,8 @@ function boostGreen(tintScale: number, originalMat: cv.Mat, lumScalingFactor: cv
   } catch (error) {
     console.log(error);
     return originalMat;
-  } finally {
-    cleanUp.forEach((mat) => mat.delete());
+  // } finally {
+  //   cleanUp.forEach((mat) => mat.delete());
   }
 }
 
@@ -304,8 +277,8 @@ async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
   } catch(error) {
     console.log(error);
     return src;
-  } finally {
-    cleanUp.forEach((mat) => mat.delete());
+  // } finally {
+  //   cleanUp.forEach((mat) => mat.delete());
   }
 }
 

@@ -80,7 +80,7 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
 
     if (highlightFactor >= 0) {
       const boostedImage = boostLowChannel(highlightFactor, adjustedImage);
-      adjustedImage.delete();
+      // adjustedImage.delete();
       adjustedImage = boostedImage;
     }
 

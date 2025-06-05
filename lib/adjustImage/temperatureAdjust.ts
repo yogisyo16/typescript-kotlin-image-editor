@@ -1,304 +1,456 @@
 import cv from "@techstark/opencv-js";
-import {sigmoid} from "@/lib/adjustImage/sigmoidAdjust"
+import { sigmoid } from "@/lib/adjustImage/sigmoidAdjust";
 
-async function boostCoolTemperature(
+// --- Helper function for COOL adjustments (temperature >= -50) - CORRECTED
+async function boostCoolLowerHalf(
   temperatureScore: number,
   originalMat: cv.Mat,
-  lumScalingFactor: cv.Mat
+  lumScalingFactor: cv.Mat,
+  bLabBoostFactor: cv.Mat,
+  blueScaleScore: number
 ): Promise<cv.Mat> {
-  const cleanUp: cv.Mat[] = [];
+  const matCleanUp: cv.Mat[] = [];
+  const vecCleanUp: cv.MatVector[] = [];
 
   try {
-    const adjustedTemp = temperatureScore * -1.0; // Reduced scaling factor from 1.684 to 1.0 for subtler effect
+    const adjustedTemp = Math.abs(temperatureScore) / 115.0;
 
-    // Initialize scale matrices
-    const redScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-    const greenScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-    const blueScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-
-    const redAdjustment = cv.Mat.ones(redScale.size(), cv.CV_32F);
-    const greenAdjustment = cv.Mat.ones(greenScale.size(), cv.CV_32F);
-    const blueAdjustment = cv.Mat.ones(blueScale.size(), cv.CV_32F);
-
-    // Apply adjustments to scales (cool: boost blue, reduce red/green)
-    const redScalarMat = cv.Mat.ones(redAdjustment.size(), cv.CV_32F);
-    redScalarMat.setTo(cv.Scalar.all(adjustedTemp * 0.005)); // Reduced from 0.01 to 0.005
-    cv.multiply(redAdjustment, redScalarMat, redAdjustment);
-    cv.multiply(redAdjustment, lumScalingFactor, redAdjustment);
-    cv.subtract(redScale, redAdjustment, redScale);
-    cleanUp.push(redAdjustment);
-
-    const greenScalarMat = cv.Mat.ones(greenAdjustment.size(), cv.CV_32F);
-    greenScalarMat.setTo(cv.Scalar.all(adjustedTemp * 0.005)); // Reduced from 0.01 to 0.005
-    cv.multiply(greenAdjustment, greenScalarMat, greenAdjustment);
-    cv.multiply(greenAdjustment, lumScalingFactor, greenAdjustment);
-    cv.subtract(greenScale, greenAdjustment, greenScale);
-    cleanUp.push(greenAdjustment);
-
-    const blueScalarMat = cv.Mat.ones(blueAdjustment.size(), cv.CV_32F);
-    blueScalarMat.setTo(cv.Scalar.all(adjustedTemp * 0.02)); // Reduced from 0.04 to 0.02
-    cv.multiply(blueAdjustment, blueScalarMat, blueAdjustment);
-    cv.multiply(blueAdjustment, lumScalingFactor, blueAdjustment);
-    cv.add(blueScale, blueAdjustment, blueScale);
-    cleanUp.push(blueAdjustment);
-
-    // Split and process channels
+    // --- Initial BGR Adjustments
     const channels = new cv.MatVector();
+    vecCleanUp.push(channels);
     cv.split(originalMat, channels);
-
-    const ch0 = channels.get(0).clone(); // Blue
-    const ch1 = channels.get(1).clone(); // Green
-    const ch2 = channels.get(2).clone(); // Red
-    ch0.convertTo(ch0, cv.CV_32F);
-    ch1.convertTo(ch1, cv.CV_32F);
-    ch2.convertTo(ch2, cv.CV_32F);
-
-    cv.multiply(ch2, redScale, ch2);
-    cv.multiply(ch1, greenScale, ch1);
-    cv.multiply(ch0, blueScale, ch0);
-    cleanUp.push(redScale, greenScale, blueScale);
-
-    // Clone channels for final merge
-    const curRedChannels = ch2.clone();
-    const curGreenChannels = ch1.clone();
-    curRedChannels.convertTo(curRedChannels, cv.CV_8U);
-    curGreenChannels.convertTo(curGreenChannels, cv.CV_8U);
-
-    // Merge channels
-    const matVector = new cv.MatVector();
-    matVector.push_back(ch0);
-    matVector.push_back(ch1);
-    matVector.push_back(ch2);
-    cv.merge(matVector, originalMat);
-    originalMat.convertTo(originalMat, cv.CV_8U);
-
-    // LAB color space adjustments for b channel
-    const labMat = new cv.Mat();
-    cv.cvtColor(originalMat, labMat, cv.COLOR_BGR2Lab);
-
-    const labChannels = new cv.MatVector();
-    cv.split(labMat, labChannels);
-    cleanUp.push(labMat);
-
-    const bChannel = labChannels.get(2).clone();
+    // Get HANDLES to channels. DO NOT delete these individually.
+    const bChannel = channels.get(0);
+    const gChannel = channels.get(1);
+    const rChannel = channels.get(2);
     bChannel.convertTo(bChannel, cv.CV_32F);
-    const bNorm = new cv.Mat();
-    const scalarMat255 = cv.Mat.ones(bChannel.size(), cv.CV_32F);
-    scalarMat255.setTo(cv.Scalar.all(255.0));
-    cv.divide(bChannel, scalarMat255, bNorm);
+    gChannel.convertTo(gChannel, cv.CV_32F);
+    rChannel.convertTo(rChannel, cv.CV_32F);
 
-    const bLabScalingFactor = sigmoid(bNorm, 8.0, 0.6, 2.5);
-    const bScale = cv.Mat.ones(bLabScalingFactor.rows, bLabScalingFactor.cols, cv.CV_32F);
-    const bAdjustment = cv.Mat.ones(bScale.rows, bScale.cols, cv.CV_32F);
-    cleanUp.push(bNorm, scalarMat255);
+    // Calculate Green Scale
+    const greenAdj = new cv.Mat();
+    const greenScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const ones = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const greenScale = new cv.Mat();
+    matCleanUp.push(greenAdj, greenScalar, ones, greenScale);
 
-    const bScalarMat = cv.Mat.ones(bAdjustment.size(), cv.CV_32F);
-    bScalarMat.setTo(cv.Scalar.all(adjustedTemp / 145.0));
-    cv.multiply(bAdjustment, bScalarMat, bAdjustment);
-    cv.multiply(bAdjustment, bLabScalingFactor, bAdjustment);
-    cv.add(bScale, bAdjustment, bScale); // Increase b for cooler tones
-    cleanUp.push(bAdjustment, bScalarMat);
+    greenScalar.setTo(cv.Scalar.all(adjustedTemp * 0.5));
+    cv.multiply(lumScalingFactor, greenScalar, greenAdj);
+    cv.add(ones, greenAdj, greenScale);
+    
+    // Calculate Blue Scale
+    const blueAdj = new cv.Mat();
+    const blueScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const blueScale = new cv.Mat();
+    matCleanUp.push(blueAdj, blueScalar, blueScale);
 
-    const labCh2 = labChannels.get(2);
-    labCh2.convertTo(labCh2, cv.CV_32F);
-    bScale.convertTo(bScale, cv.CV_32F);
-    cv.multiply(labCh2, bScale, labCh2);
-    labCh2.convertTo(labCh2, cv.CV_8U);
-    cleanUp.push(bScale);
+    blueScalar.setTo(cv.Scalar.all(adjustedTemp * blueScaleScore));
+    cv.multiply(lumScalingFactor, blueScalar, blueAdj);
+    cv.add(ones, blueAdj, blueScale);
 
-    cv.merge(labChannels, labMat);
-    cv.cvtColor(labMat, originalMat, cv.COLOR_Lab2BGR);
+    // Apply scaling
+    cv.multiply(gChannel, greenScale, gChannel);
+    cv.multiply(bChannel, blueScale, bChannel);
 
-    // Final channel adjustments
+    // Merge for LAB adjustment
+    const mergedForLab = new cv.Mat();
+    matCleanUp.push(mergedForLab);
+    const mergedVector = new cv.MatVector();
+    vecCleanUp.push(mergedVector);
+    mergedVector.push_back(bChannel);
+    mergedVector.push_back(gChannel);
+    mergedVector.push_back(rChannel);
+    cv.merge(mergedVector, mergedForLab);
+    mergedForLab.convertTo(mergedForLab, cv.CV_8U);
+    
+    // Keep a CLONE of the red channel. Clones must be cleaned up.
+    const redTemp = rChannel.clone(); 
+    matCleanUp.push(redTemp);
+
+    // --- LAB Color Space Adjustments (B Channel)
+    const labImage = new cv.Mat();
+    matCleanUp.push(labImage);
+    const labChannels = new cv.MatVector();
+    vecCleanUp.push(labChannels);
+    cv.cvtColor(mergedForLab, labImage, cv.COLOR_BGR2Lab);
+    cv.split(labImage, labChannels);
+
+    const bLabChannel = labChannels.get(2); // This is a HANDLE
+    bLabChannel.convertTo(bLabChannel, cv.CV_32F);
+
+    const bAdj = new cv.Mat();
+    const bScalar = cv.Mat.ones(bLabBoostFactor.size(), cv.CV_32F);
+    const labOnes = cv.Mat.ones(bLabBoostFactor.size(), cv.CV_32F);
+    const bScale = new cv.Mat();
+    matCleanUp.push(bAdj, bScalar, labOnes, bScale);
+    bScalar.setTo(cv.Scalar.all(adjustedTemp / 3.0));
+    cv.multiply(bLabBoostFactor, bScalar, bAdj);
+    cv.subtract(labOnes, bAdj, bScale);
+
+    cv.multiply(bLabChannel, bScale, bLabChannel);
+    bLabChannel.convertTo(bLabChannel, cv.CV_8U);
+
+    cv.merge(labChannels, labImage);
+    cv.cvtColor(labImage, originalMat, cv.COLOR_Lab2BGR);
+
+    // --- Final Channel Adjustments
     const finalChannels = new cv.MatVector();
+    vecCleanUp.push(finalChannels);
     cv.split(originalMat, finalChannels);
-    finalChannels.set(2, curRedChannels.clone());
-    finalChannels.set(1, curGreenChannels.clone());
+    const finalG = finalChannels.get(1); // Handle
+    const finalR = finalChannels.get(2); // Handle
 
+    // Red channel final adjustment
+    const redTempNorm = new cv.Mat();
+    const scalar255 = cv.Mat.ones(redTemp.size(), cv.CV_32F);
+    const redScaleFactor = sigmoid(redTempNorm, 11.0, 0.325, 0.6);
+    const redScaleAfterAdj = new cv.Mat();
+    const redScalarAfter = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const finalRedScale = new cv.Mat();
+    const finalOnes = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    matCleanUp.push(redTempNorm, scalar255, redScaleFactor, redScaleAfterAdj, redScalarAfter, finalRedScale, finalOnes);
+
+    scalar255.setTo(cv.Scalar.all(255.0));
+    cv.divide(redTemp, scalar255, redTempNorm);
+    redScalarAfter.setTo(cv.Scalar.all(adjustedTemp * 1.2));
+    cv.multiply(lumScalingFactor, redScalarAfter, redScaleAfterAdj);
+    cv.multiply(redScaleAfterAdj, redScaleFactor, redScaleAfterAdj);
+    cv.subtract(finalOnes, redScaleAfterAdj, finalRedScale);
+    
+    finalR.convertTo(finalR, cv.CV_32F);
+    cv.multiply(finalR, finalRedScale, finalR);
+
+    // Green channel final adjustment
+    const greenScaleAfter = new cv.Mat();
+    const greenScalarAfter = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const finalOnesGreen = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const finalGreenScale = new cv.Mat();
+    matCleanUp.push(greenScaleAfter, greenScalarAfter, finalOnesGreen, finalGreenScale);
+    
+    greenScalarAfter.setTo(cv.Scalar.all(adjustedTemp * 0.7));
+    cv.multiply(lumScalingFactor, greenScalarAfter, greenScaleAfter);
+    cv.add(finalOnesGreen, greenScaleAfter, finalGreenScale);
+    
+    finalG.convertTo(finalG, cv.CV_32F);
+    cv.multiply(finalG, finalGreenScale, finalG);
+
+    // Merge final channels
+    finalR.convertTo(finalR, cv.CV_8U);
+    finalG.convertTo(finalG, cv.CV_8U);
     cv.merge(finalChannels, originalMat);
-    originalMat.convertTo(originalMat, cv.CV_8U);
 
     return originalMat;
   } catch (error) {
-    console.error(error);
+    console.error("Error in boostCoolLowerHalf:", error);
     return originalMat;
   } finally {
-    cleanUp.forEach((mat) => mat.delete());
+    // This now cleans up Mats and MatVectors correctly and safely
+    matCleanUp.forEach((mat) => mat.delete());
+    vecCleanUp.forEach((vec) => vec.delete());
   }
 }
-  
-  // -- warmTemparture for Temperature
+
+// --- Helper function for COOL adjustments (temperature < -50) - CORRECTED
+async function boostCoolUpperHalf(
+  temperatureScore: number,
+  originalMat: cv.Mat,
+  lumScalingFactor: cv.Mat,
+  bLabBoostFactor: cv.Mat,
+  blueScaleScore: number
+): Promise<cv.Mat> {
+    const matCleanUp: cv.Mat[] = [];
+    const vecCleanUp: cv.MatVector[] = [];
+    
+    try {
+        const adjustedTemp = Math.abs(temperatureScore) / 115.0;
+
+        // --- Initial BGR Adjustments
+        const channels = new cv.MatVector();
+        vecCleanUp.push(channels);
+        cv.split(originalMat, channels);
+        const bChannel = channels.get(0);
+        const gChannel = channels.get(1);
+        const rChannel = channels.get(2);
+        bChannel.convertTo(bChannel, cv.CV_32F);
+        gChannel.convertTo(gChannel, cv.CV_32F);
+        rChannel.convertTo(rChannel, cv.CV_32F);
+        
+        const greenAdj = new cv.Mat();
+        const greenScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        const ones = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        const greenScale = new cv.Mat();
+        const blueAdj = new cv.Mat();
+        const blueScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        const blueScale = new cv.Mat();
+        matCleanUp.push(greenAdj, greenScalar, ones, greenScale, blueAdj, blueScalar, blueScale);
+
+        greenScalar.setTo(cv.Scalar.all(adjustedTemp * 0.5));
+        cv.multiply(lumScalingFactor, greenScalar, greenAdj);
+        cv.add(ones, greenAdj, greenScale);
+
+        blueScalar.setTo(cv.Scalar.all(adjustedTemp * blueScaleScore));
+        cv.multiply(lumScalingFactor, blueScalar, blueAdj);
+        cv.add(ones, blueAdj, blueScale);
+
+        cv.multiply(gChannel, greenScale, gChannel);
+        cv.multiply(bChannel, blueScale, bChannel);
+        
+        const mergedForLab = new cv.Mat();
+        matCleanUp.push(mergedForLab);
+        const mergedVector = new cv.MatVector();
+        vecCleanUp.push(mergedVector);
+        mergedVector.push_back(bChannel);
+        mergedVector.push_back(gChannel);
+        mergedVector.push_back(rChannel);
+        cv.merge(mergedVector, mergedForLab);
+        mergedForLab.convertTo(mergedForLab, cv.CV_8U);
+
+        const redTemp = rChannel.clone();
+        matCleanUp.push(redTemp);
+
+        // --- LAB Color Space Adjustments
+        const labImage = new cv.Mat();
+        matCleanUp.push(labImage);
+        const labChannels = new cv.MatVector();
+        vecCleanUp.push(labChannels);
+        cv.cvtColor(mergedForLab, labImage, cv.COLOR_BGR2Lab);
+        cv.split(labImage, labChannels);
+
+        const bLabChannel = labChannels.get(2);
+        bLabChannel.convertTo(bLabChannel, cv.CV_32F);
+        
+        const bAdj = new cv.Mat();
+        const bScalar = cv.Mat.ones(bLabBoostFactor.size(), cv.CV_32F);
+        const labOnes = cv.Mat.ones(bLabBoostFactor.size(), cv.CV_32F);
+        const bScale = new cv.Mat();
+        matCleanUp.push(bAdj, bScalar, labOnes, bScale);
+        
+        bScalar.setTo(cv.Scalar.all(adjustedTemp / 1.9)); // Different from lower_half
+        cv.multiply(bLabBoostFactor, bScalar, bAdj);
+        cv.subtract(labOnes, bAdj, bScale);
+
+        cv.multiply(bLabChannel, bScale, bLabChannel);
+        bLabChannel.convertTo(bLabChannel, cv.CV_8U);
+
+        cv.merge(labChannels, labImage);
+        cv.cvtColor(labImage, originalMat, cv.COLOR_Lab2BGR);
+
+        // --- Final Channel Adjustments
+        const finalChannels = new cv.MatVector();
+        vecCleanUp.push(finalChannels);
+        cv.split(originalMat, finalChannels);
+        const finalB = finalChannels.get(0);
+        const finalG = finalChannels.get(1);
+        // finalChannels.get(2).delete(); // Delete the old red channel from the vector itself
+
+        // Red channel final adjustment
+        const redTempNorm = new cv.Mat();
+        const scalar255 = cv.Mat.ones(redTemp.size(), cv.CV_32F);
+        const redScaleFactor = sigmoid(redTempNorm, 11.0, 0.325, 0.6);
+        const redScaleAfterAdj = new cv.Mat();
+        const redScalarAfter = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        const finalRedScale = new cv.Mat();
+        const finalOnes = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        matCleanUp.push(redTempNorm, scalar255, redScaleFactor, redScaleAfterAdj, redScalarAfter, finalRedScale, finalOnes);
+
+        scalar255.setTo(cv.Scalar.all(255.0));
+        cv.divide(redTemp, scalar255, redTempNorm);
+        redScalarAfter.setTo(cv.Scalar.all(adjustedTemp * 2.0)); // Different from lower_half
+        cv.multiply(lumScalingFactor, redScalarAfter, redScaleAfterAdj);
+        cv.multiply(redScaleAfterAdj, redScaleFactor, redScaleAfterAdj);
+        cv.subtract(finalOnes, redScaleAfterAdj, finalRedScale);
+
+        const finalR = redTemp; // Use the cloned red channel
+        finalR.convertTo(finalR, cv.CV_32F);
+        cv.multiply(finalR, finalRedScale, finalR);
+
+        // Green channel final adjustment
+        const greenScaleAfter = new cv.Mat();
+        const greenScalarAfter = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        const finalOnesGreen = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+        const finalGreenScale = new cv.Mat();
+        matCleanUp.push(greenScaleAfter, greenScalarAfter, finalOnesGreen, finalGreenScale);
+        
+        greenScalarAfter.setTo(cv.Scalar.all(adjustedTemp * 0.7));
+        cv.multiply(lumScalingFactor, greenScalarAfter, greenScaleAfter);
+        cv.add(finalOnesGreen, greenScaleAfter, finalGreenScale);
+
+        finalG.convertTo(finalG, cv.CV_32F);
+        cv.multiply(finalG, finalGreenScale, finalG);
+
+        // Merge final channels
+        finalR.convertTo(finalR, cv.CV_8U);
+        finalG.convertTo(finalG, cv.CV_8U);
+
+        finalChannels.set(1, finalG);
+        finalChannels.set(2, finalR); // Set the newly adjusted red channel
+        cv.merge(finalChannels, originalMat);
+
+        return originalMat;
+    } catch (error) {
+        console.error("Error in boostCoolUpperHalf:", error);
+        return originalMat;
+    } finally {
+        matCleanUp.forEach((mat) => mat.delete());
+        vecCleanUp.forEach((vec) => vec.delete());
+    }
+}
+
+// --- FINAL, SIMPLIFIED boostWarmTemperature ---
 async function boostWarmTemperature(
   temperatureScore: number,
-  originalMat: cv.Mat,
-  lumScalingFactor: cv.Mat
+  originalMat: cv.Mat // Note: It no longer needs lumScalingFactor from outside
 ): Promise<cv.Mat> {
-  const cleanUp: cv.Mat[] = [];
+  const matCleanUp: cv.Mat[] = [];
+  const vecCleanUp: cv.MatVector[] = [];
+
   try {
-    const adjustedTemp = temperatureScore * 1.684; // Match tint scaling
+    const asjutedTemp = temperatureScore * 473;
+    // Create the luminance scaling factor right here inside the function
+    const labImage = new cv.Mat();
+    const lum = new cv.Mat();
+    const lumNorm = new cv.Mat();
+    const lumSub = new cv.Mat();
+    const ones = cv.Mat.ones(originalMat.size(), cv.CV_32F);
+    matCleanUp.push(labImage, lum, lumNorm, lumSub, ones);
 
-    // Initialize scale matrices
-    const redScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-    const greenScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
-    const blueScale = cv.Mat.ones(lumScalingFactor.rows, lumScalingFactor.cols, cv.CV_32F);
+    cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
+    cv.split(labImage, lum); // We only need the L channel
+    lum.convertTo(lumNorm, cv.CV_32F, 1.0 / 255.0);
+    cv.subtract(ones, lumNorm, lumSub);
+    const lumScalingFactor = sigmoid(lumSub, 5.0, 0.5);
+    matCleanUp.push(lumScalingFactor);
 
-    const redAdjustment = cv.Mat.ones(redScale.size(), cv.CV_32F);
-    const greenAdjustment = cv.Mat.ones(greenScale.size(), cv.CV_32F);
-    const blueAdjustment = cv.Mat.ones(blueScale.size(), cv.CV_32F);
+    // A linear scaling factor for the temperature slider
+    const tempValue = (temperatureScore / 100.0) * 4.372; 
 
-    // Apply adjustments to scales (warm: boost red/green, reduce blue)
-    const redScalarMat = cv.Mat.ones(redAdjustment.size(), cv.CV_32F);
-    redScalarMat.setTo(cv.Scalar.all(adjustedTemp * 0.018));
-    cv.multiply(redAdjustment, redScalarMat, redAdjustment);
-    cv.multiply(redAdjustment, lumScalingFactor, redAdjustment);
-    cv.add(redScale, redAdjustment, redScale);
-    cleanUp.push(redAdjustment, redScalarMat);
-
-    const greenScalarMat = cv.Mat.ones(greenAdjustment.size(), cv.CV_32F);
-    greenScalarMat.setTo(cv.Scalar.all(adjustedTemp * 0.006));
-    cv.multiply(greenAdjustment, greenScalarMat, greenAdjustment);
-    cv.multiply(greenAdjustment, lumScalingFactor, greenAdjustment);
-    cv.add(greenScale, greenAdjustment, greenScale);
-    cleanUp.push(greenAdjustment, greenScalarMat);
-
-    const blueScalarMat = cv.Mat.ones(blueAdjustment.size(), cv.CV_32F);
-    blueScalarMat.setTo(cv.Scalar.all(adjustedTemp * 0.04));
-    cv.multiply(blueAdjustment, blueScalarMat, blueAdjustment);
-    cv.multiply(blueAdjustment, lumScalingFactor, blueAdjustment);
-    cv.subtract(blueScale, blueAdjustment, blueScale);
-    cleanUp.push(blueAdjustment, blueScalarMat);
-
-    // Split and process channels
     const channels = new cv.MatVector();
+    vecCleanUp.push(channels);
     cv.split(originalMat, channels);
 
-    const ch0 = channels.get(0).clone(); // Blue
-    const ch1 = channels.get(1).clone(); // Green
-    const ch2 = channels.get(2).clone(); // Red
-    ch0.convertTo(ch0, cv.CV_32F);
-    ch1.convertTo(ch1, cv.CV_32F);
-    ch2.convertTo(ch2, cv.CV_32F);
+    const bChannel = channels.get(0);
+    const gChannel = channels.get(1);
+    const rChannel = channels.get(2);
+    bChannel.convertTo(bChannel, cv.CV_32F);
+    gChannel.convertTo(gChannel, cv.CV_32F);
+    rChannel.convertTo(rChannel, cv.CV_32F);
 
-    cv.multiply(ch2, redScale, ch2);
-    cv.multiply(ch1, greenScale, ch1);
-    cv.multiply(ch0, blueScale, ch0);
-    cleanUp.push(redScale, greenScale, blueScale);
+    // 1. Boost RED channel
+    const redAdj = new cv.Mat();
+    const redScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const redScale = new cv.Mat();
+    matCleanUp.push(redAdj, redScalar, redScale);
+    redScalar.setTo(cv.Scalar.all(tempValue * 0.25)); 
+    cv.multiply(lumScalingFactor, redScalar, redAdj);
+    cv.add(ones, redAdj, redScale);
+    cv.multiply(rChannel, redScale, rChannel);
 
-    // Clone channels for final merge
-    const curRedChannels = ch2.clone();
-    const curGreenChannels = ch1.clone();
-    curRedChannels.convertTo(curRedChannels, cv.CV_8U);
-    curGreenChannels.convertTo(curGreenChannels, cv.CV_8U);
+    // 2. Reduce BLUE channel
+    const blueAdj = new cv.Mat();
+    const blueScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const blueScale = new cv.Mat();
+    matCleanUp.push(blueAdj, blueScalar, blueScale);
+    blueScalar.setTo(cv.Scalar.all(tempValue * 0.35));
+    cv.multiply(lumScalingFactor, blueScalar, blueAdj);
+    cv.subtract(ones, blueAdj, blueScale);
+    cv.multiply(bChannel, blueScale, bChannel);
 
-    // Merge channels
-    const matVector = new cv.MatVector();
-    matVector.push_back(ch0);
-    matVector.push_back(ch1);
-    matVector.push_back(ch2);
-    cv.merge(matVector, originalMat);
-    originalMat.convertTo(originalMat, cv.CV_8U);
-
-    // LAB color space adjustments for a channel
-    const labMat = new cv.Mat();
-    cv.cvtColor(originalMat, labMat, cv.COLOR_BGR2Lab);
-
-    const labChannels = new cv.MatVector();
-    cv.split(labMat, labChannels);
-    cleanUp.push(labMat);
-
-    const aChannel = labChannels.get(1).clone();
-    aChannel.convertTo(aChannel, cv.CV_32F);
-    const aNorm = new cv.Mat();
-    const scalarMat255 = cv.Mat.ones(aChannel.size(), cv.CV_32F);
-    scalarMat255.setTo(cv.Scalar.all(255.0));
-    cv.divide(aChannel, scalarMat255, aNorm);
-    cleanUp.push(aChannel, scalarMat255);
-
-    const aLabScalingFactor = sigmoid(aNorm, 8.0, 0.6, 2.5);
-    const aScale = cv.Mat.ones(aLabScalingFactor.rows, aLabScalingFactor.cols, cv.CV_32F);
-    const aAdjustment = cv.Mat.ones(aScale.rows, aScale.cols, cv.CV_32F);
-    cleanUp.push(aScale, aNorm);
-
-    const aScalarMat = cv.Mat.ones(aAdjustment.size(), cv.CV_32F);
-    aScalarMat.setTo(cv.Scalar.all(adjustedTemp / 145.0));
-    cv.multiply(aAdjustment, aScalarMat, aAdjustment);
-    cv.multiply(aAdjustment, aLabScalingFactor, aAdjustment);
-    cv.add(aScale, aAdjustment, aScale); // Increase a for warmer tones
-    cleanUp.push(aAdjustment, aScalarMat, aLabScalingFactor);
-
-    const labCh1 = labChannels.get(1);
-    labCh1.convertTo(labCh1, cv.CV_32F);
-    aScale.convertTo(aScale, cv.CV_32F);
-    cv.multiply(labCh1, aScale, labCh1);
-    labCh1.convertTo(labCh1, cv.CV_8U);
-    cleanUp.push(aScale, labCh1);
-
-    cv.merge(labChannels, labMat);
-    cv.cvtColor(labMat, originalMat, cv.COLOR_Lab2BGR);
-
-    // Final channel adjustments
-    const finalChannels = new cv.MatVector();
-    cv.split(originalMat, finalChannels);
-    finalChannels.set(2, curRedChannels.clone());
-    finalChannels.set(1, curGreenChannels.clone());
-
-    cv.merge(finalChannels, originalMat);
+    // 3. (Optional) Slight green boost
+    const greenAdj = new cv.Mat();
+    const greenScalar = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
+    const greenScale = new cv.Mat();
+    matCleanUp.push(greenAdj, greenScalar, greenScale);
+    greenScalar.setTo(cv.Scalar.all(tempValue * 0.05));
+    cv.multiply(lumScalingFactor, greenScalar, greenAdj);
+    cv.add(ones, greenAdj, greenScale);
+    
+    // TYPO FIX: The destination of the multiply must be the channel itself.
+    cv.multiply(gChannel, greenScale, gChannel);
+    
+    cv.merge(channels, originalMat);
     originalMat.convertTo(originalMat, cv.CV_8U);
 
     return originalMat;
-  } catch(error) {
-    console.log(error);
-    return originalMat
+  } catch (error) {
+    console.error("Error in simplified boostWarmTemperature:", error);
+    return originalMat;
   } finally {
-    cleanUp.forEach((mat) => mat.delete());
+    matCleanUp.forEach((mat) => mat.delete());
+    vecCleanUp.forEach((vec) => vec.delete());
   }
 }
-  
-  // -- Implement adjustment Termperature
-async function modifyImageTemperature(src: cv.Mat, colorTemperature: number): Promise<cv.Mat> {
+
+// --- CORRECTED modifyImageTemperature ---
+async function modifyImageTemperature(
+  src: cv.Mat,
+  colorTemperature: number
+): Promise<cv.Mat> {
+  if (colorTemperature === 0) {
+    return src.clone();
+  }
+
   const cleanUp: cv.Mat[] = [];
-
+  const originalMat = src.clone();
+  cleanUp.push(originalMat);
+  
   try {
-    const labImage = new cv.Mat();
-    const originalMat = src.clone();
+    // This is the main logical change. We separate the warm and cool paths entirely.
+    if (colorTemperature > 0) {
+      // WARM PATH:
+      // Call the simple, direct BGR function. It does not need any LAB factors.
+      await boostWarmTemperature(colorTemperature, originalMat);
+    } else {
+      // COOL PATH:
+      // This path REQUIRES the LAB conversion to get its adjustment factors.
+      // We only run the cvtColor code when we absolutely need it.
+      cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
 
-    // Convert to BGR color space
-    cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
-    cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
+      const labImage = new cv.Mat();
+      const labChannels = new cv.MatVector();
+      const lum = new cv.Mat();
+      const lumNorm = new cv.Mat();
+      const lumSub = new cv.Mat();
+      const ones = cv.Mat.ones(originalMat.size(), cv.CV_32F);
+      const bNorm = new cv.Mat();
+      cleanUp.push(labImage, lum, lumNorm, lumSub, ones, bNorm);
+      // Note: MatVectors are cleaned up inside the cool helper functions.
 
-    // Split LAB channels
-    const labChannels = new cv.MatVector();
-    cv.split(labImage, labChannels);
-    cleanUp.push(labImage);
+      cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
+      cv.split(labImage, labChannels);
+      labChannels.get(0).copyTo(lum);
 
-    // Extract the L (lightness) channel
-    const lum = labChannels.get(0).clone();
-    lum.convertTo(lum, cv.CV_32F);
-    const lumNorm = new cv.Mat();
-    const scalarMat255 = cv.Mat.ones(lum.size(), cv.CV_32F);
-    scalarMat255.setTo(cv.Scalar.all(255.0));
-    cv.divide(lum, scalarMat255, lumNorm);
-    cleanUp.push(lum, scalarMat255);
+      lum.convertTo(lumNorm, cv.CV_32F, 1.0 / 255.0);
+      cv.subtract(ones, lumNorm, lumSub);
+      const lumScalingFactor = sigmoid(lumSub, 5.0, 0.5);
+      cleanUp.push(lumScalingFactor);
 
-    const dummyOnes = cv.Mat.ones(lum.rows, lum.cols, cv.CV_32F);
-    const lumSub = new cv.Mat();
-    cv.subtract(dummyOnes, lumNorm, lumSub);
-    const lumScalingFactor = sigmoid(lumSub, 5.0, 0.5);
-    cleanUp.push(lumNorm, dummyOnes, lumSub);
+      let blueScaleScore = 4.9;
+      if (colorTemperature < -50) {
+        const x = Math.abs(colorTemperature);
+        blueScaleScore = 5.0 + ((x - 51) * (8.0 - 5.0)) / (100 - 51);
+      }
 
-    const adjustedMat = colorTemperature >= 0
-      ? await boostWarmTemperature(colorTemperature, originalMat, lumScalingFactor)
-      : await boostCoolTemperature(colorTemperature, originalMat, lumScalingFactor);
+      const bChannel = labChannels.get(2);
+      bChannel.convertTo(bNorm, cv.CV_32F, 1.0 / 255.0);
+      const bLabBoostFactor = sigmoid(bNorm, 11.0, 0.625, 2.0);
+      cleanUp.push(bLabBoostFactor);
+      // labChannels.delete(); // Clean up the vector now that we're done with it.
 
-    // Convert for display
-    cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2RGB);
-    const result = adjustedMat.clone();
-
-    // console.log("Temperature Adjusted", result);
+      if (colorTemperature >= -50) {
+        await boostCoolLowerHalf(colorTemperature, originalMat, lumScalingFactor, bLabBoostFactor, blueScaleScore);
+      } else {
+        await boostCoolUpperHalf(colorTemperature, originalMat, lumScalingFactor, bLabBoostFactor, blueScaleScore);
+      }
+    }
+    
+    // Convert the final result for display
+    cv.cvtColor(originalMat, originalMat, cv.COLOR_BGR2RGB);
+    const result = originalMat.clone();
     return result;
+
   } catch (error) {
-    console.log(error);
-    return src;
+    console.error("Failed to modify image temperature:", error);
+    return src.clone();
   } finally {
     cleanUp.forEach((mat) => mat.delete());
   }

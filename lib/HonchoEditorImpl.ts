@@ -96,7 +96,6 @@ export class HonchoEditorClass implements HonchoEditor {
   }
   
   private async applyAllAdjustments(): Promise<void> {
-    // Start with a fresh clone of the original image for each full render pass
     let imageToProcess = this.inputImage.clone();
     
     try {
@@ -118,20 +117,15 @@ export class HonchoEditorClass implements HonchoEditor {
 
       for (const adjustment of adjustmentPipeline) {
         if (adjustment.value !== 0) {
-          console.log(`Applying: ${adjustment.name}`);
-          // Apply the adjustment function to the current state of the image
+          console.log("Applying:", adjustment.name);
           const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
-          
-          // IMPORTANT: Delete the previous image state to prevent memory leaks
           imageToProcess.delete(); 
-          
-          // The result of this step becomes the input for the next step
           imageToProcess = resultOfThisStep;
         }
       }
 
       // After all adjustments, update the main editable image
-      this.currentImageEdit.delete();
+      // this.currentImageEdit.delete();
       this.currentImageEdit = imageToProcess;
 
     } catch (err) {

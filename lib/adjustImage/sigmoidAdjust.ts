@@ -14,8 +14,8 @@ export function sigmoid(input: cv.Mat, k: number, x0: number, numerator: number 
       cv.multiply(result, kMat, result);
       cv.exp(result, result);
       cv.add(result, oneMat, result);
-      x0Mat.delete();
-      kMat.delete();
+      // x0Mat.delete();
+      // kMat.delete();
     } else {
       const x0Mat = new cv.Mat(input.rows, input.cols, cv.CV_32F, new cv.Scalar(x0));
       cv.subtract(input, x0Mat, result);
@@ -23,8 +23,8 @@ export function sigmoid(input: cv.Mat, k: number, x0: number, numerator: number 
       cv.multiply(result, kMat, result);
       cv.exp(result, result);
       cv.add(result, oneMat, result);
-      x0Mat.delete();
-      kMat.delete();
+      // x0Mat.delete();
+      // kMat.delete();
     }
 
     let scalarMat = new cv.Mat(input.rows, input.cols, cv.CV_32F, new cv.Scalar(1));
@@ -33,7 +33,7 @@ export function sigmoid(input: cv.Mat, k: number, x0: number, numerator: number 
     } else {
       const numeratorMat = new cv.Mat(scalarMat.rows, scalarMat.cols, cv.CV_32F, new cv.Scalar(numerator));
       cv.multiply(scalarMat, numeratorMat, scalarMat);
-      numeratorMat.delete();
+      // numeratorMat.delete();
     }
 
     cv.divide(scalarMat, result, result);
