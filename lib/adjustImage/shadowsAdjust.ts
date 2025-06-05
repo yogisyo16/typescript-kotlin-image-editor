@@ -1,6 +1,7 @@
 import cv from "@techstark/opencv-js";
 
 async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat> {
+  const cleanUp: cv.Mat[] = [];
   try {
     const srcClone = src.clone();
     if (!srcClone || srcClone.empty()) {
@@ -9,12 +10,14 @@ async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat>
 
     const originalImage = new cv.Mat();
     cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
+    cleanUp.push(srcClone);
 
     // Map shadows (0 to 100) to a darkening factor (1 to 0)
     const shadowFactor = 1 - (shadows / -100); // 1 (no change) to 0 (max darkening)
 
     const hsvImage = new cv.Mat();
     cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
+    cleanUp.push(originalImage);
 
     const channels = new cv.MatVector();
     cv.split(hsvImage, channels);
@@ -31,22 +34,18 @@ async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat>
 
     let adjustedImage = new cv.Mat();
     cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+    cleanUp.push(hsvImage, channels as any, scaledValue);
 
     const finalImage = new cv.Mat();
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
-
-    // Clean up
-    srcClone.delete();
-    originalImage.delete();
-    hsvImage.delete();
-    channels.delete();
-    scaledValue.delete();
-    adjustedImage.delete();
+    cleanUp.push(adjustedImage);
 
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_shadows:", error);
     throw error;
+  } finally {
+    cleanUp.forEach((mat) => mat.delete());
   }
 }
 

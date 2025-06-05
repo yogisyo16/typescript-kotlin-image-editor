@@ -1,6 +1,8 @@
 import cv from "@techstark/opencv-js";
 
 async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
+  const cleanUp: cv.Mat[] = [];
+
   try {
     const srcClone = src.clone();
     if (!srcClone || srcClone.empty()) {
@@ -14,6 +16,7 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
 
     const hsvImage = new cv.Mat();
     cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
+    cleanUp.push(originalImage);
 
     const channels = new cv.MatVector();
     cv.split(hsvImage, channels);
@@ -31,11 +34,13 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
     }
 
     channels.set(2, scaledValue);
+    cleanUp.push(scaledValue);
 
     cv.merge(channels, hsvImage);
 
     let adjustedImage = new cv.Mat();
     cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+    cleanUp.push(hsvImage);
 
     // if (blackFactor >= 0 && typeof cv.GaussianBlur === 'function') {
     //   const blurredImage = new cv.Mat();
@@ -47,17 +52,12 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
     const finalImage = new cv.Mat();
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
 
-    srcClone.delete();
-    originalImage.delete();
-    hsvImage.delete();
-    channels.delete();
-    scaledValue.delete();
-    adjustedImage.delete();
-
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_blacks:", error);
     throw error;
+  } finally {
+    cleanUp.forEach((mat) => mat.delete());
   }
 }
 

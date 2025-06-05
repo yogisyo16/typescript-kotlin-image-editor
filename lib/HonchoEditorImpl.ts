@@ -1,5 +1,6 @@
 import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
 import cleanAndExecuteAdjustment from "@/lib/adjustExt/cleanAdjust";
+import { computeDelta } from "@/lib/adjustExt/adjustmentProcessor"; 
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
 import modifyImageTint from "@/lib/adjustImage/tintAdjust";
@@ -58,8 +59,8 @@ export class HonchoEditorClass implements HonchoEditor {
     Tint: 0,
     Highlights: 0,
     Shadow: 0,
-    Black: 0,
-    White: 0,
+    Blacks: 0,
+    Whites: 0,
     Contrast: 0,
     Saturation: 0,
     Vibrance: 0,
@@ -93,96 +94,61 @@ export class HonchoEditorClass implements HonchoEditor {
   onImageUpdate(inputImage: cv.Mat): cv.Mat {
     return inputImage.clone(); // Clone to avoid modifying the input
   }
+  
+  private async applyAllAdjustments(): Promise<void> {
+    // Start with a fresh clone of the original image for each full render pass
+    let imageToProcess = this.inputImage.clone();
+    
+    try {
+      // This defines a professional and logical order of operations.
+      const adjustmentPipeline = [
+        // Basic tonal adjustments
+        { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+        { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+        { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+        { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+        { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+        { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+        // Color adjustments
+        { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+        { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
+        { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+        { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+      ];
+
+      for (const adjustment of adjustmentPipeline) {
+        if (adjustment.value !== 0) {
+          console.log(`Applying: ${adjustment.name}`);
+          // Apply the adjustment function to the current state of the image
+          const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
+          
+          // IMPORTANT: Delete the previous image state to prevent memory leaks
+          imageToProcess.delete(); 
+          
+          // The result of this step becomes the input for the next step
+          imageToProcess = resultOfThisStep;
+        }
+      }
+
+      // After all adjustments, update the main editable image
+      this.currentImageEdit.delete();
+      this.currentImageEdit = imageToProcess;
+
+    } catch (err) {
+      console.error("An error occurred during the adjustment pipeline:", err);
+      // If any step fails, clean up the intermediate image and revert to the original.
+      if (imageToProcess) imageToProcess.delete();
+      this.currentImageEdit = this.inputImage.clone();
+    }
+  }
 
   async adjust(type: AdjustType, value: number): Promise<void> {
-    // console.log("type: ", type, "value: ", value);
-    let exposureImage = new cv.Mat();
-    let temperatureImage = new cv.Mat();
-    if (type == AdjustType.Exposure) {
-        const currentExposure = this.config.Exposure;
-
-        if (currentExposure !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(currentExposure, value, this.inputImage, this.currentImageEdit, modifyImageExposure);
-        }
-        // Update value exposure publish to UI
-        this.config.Exposure = value;
-    } else if (type == AdjustType.Temperature) {
-        const currentTemperature = this.config.Temperature;
-
-        if (currentTemperature !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(currentTemperature, value, this.inputImage, this.currentImageEdit, modifyImageTemperature);
-        }
-        this.config.Temperature = value;
-    } else if (type == AdjustType.Tint) {
-        const currentTint = this.config.Tint;
-
-        if (currentTint !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(currentTint, value, this.inputImage, this.currentImageEdit, modifyImageTint);
-        }
-
-        this.config.Tint = value;
-    } else if (type == AdjustType.Highlights) {
-        const currentHighlights = this.config.Highlights;
-
-        if (currentHighlights !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, value, this.inputImage, this.currentImageEdit, modifyImageHighlights);
-        }
-
-        this.config.Highlights = value;
-    } else if (type == AdjustType.Shadow) {
-        const currentShadow = this.config.Shadow;
-
-        if (currentShadow !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, value, this.inputImage, this.currentImageEdit, modifyImageShadows);
-        }
-
-        this.config.Shadow = value;
-    } else if (type == AdjustType.Blacks) {
-        const currentBlack = this.config.Black;
-
-        if (currentBlack !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Black, value, this.inputImage, this.currentImageEdit, modifyImageBlacks);
-        }
-
-        this.config.Black = value;
-    } else if (type == AdjustType.Whites) {
-        const currentWhite = this.config.White;
-
-        if (currentWhite !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.White, value, this.inputImage, this.currentImageEdit, modifyImageWhites);
-        }
-
-        this.config.White = value;
-    } else if (type == AdjustType.Contrast) {
-        const currentContrast = this.config.Contrast;
-
-        if (currentContrast !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, value, this.inputImage, this.currentImageEdit, modifyImageContrast);
-        }
-
-        this.config.Contrast = value;
-    } else if (type == AdjustType.Vibrance) {
-        const currentVibrance = this.config.Vibrance;
-
-        if (currentVibrance !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, value, this.inputImage, this.currentImageEdit, modifyImageVibrance);
-        }
-
-        this.config.Vibrance = value;
-    } else if (type == AdjustType.Saturation) {
-        const currentSaturation = this.config.Saturation;
-
-        if (currentSaturation !== value) {
-          this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, value, this.inputImage, this.currentImageEdit, modifyImageSaturation);
-        }
-        this.config.Saturation = value;
-    }
-
-    // this.currentImageEdit = exposureImage;
-
+    const key = AdjustType[type] as keyof Config;
+    if (this.config[key] === value) return;
+    this.config[key] = value;
+    await this.applyAllAdjustments();
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-    // console.log(this.config);
   }
 
   configHistotrypush() {
@@ -194,8 +160,8 @@ export class HonchoEditorClass implements HonchoEditor {
         Shadow: this.config.Shadow,
         Highlights: this.config.Highlights,
         Tint: this.config.Tint,
-        Black: this.config.Black,
-        White: this.config.White,
+        Blacks: this.config.Blacks,
+        Whites: this.config.Whites,
         Contrast: this.config.Contrast,
         Saturation: this.config.Saturation,
         Vibrance: this.config.Vibrance
@@ -218,8 +184,8 @@ export class HonchoEditorClass implements HonchoEditor {
           this.config.Tint = undoConfig.Tint;
           this.config.Highlights = undoConfig.Highlights;
           this.config.Shadow = undoConfig.Shadow;
-          this.config.Black = undoConfig.Black;
-          this.config.White = undoConfig.White;
+          this.config.Blacks = undoConfig.Blacks;
+          this.config.Whites = undoConfig.Whites;
           this.config.Contrast = undoConfig.Contrast;
           this.config.Saturation = undoConfig.Saturation;
           this.config.Vibrance = undoConfig.Vibrance;  
@@ -241,8 +207,8 @@ export class HonchoEditorClass implements HonchoEditor {
         this.config.Tint = redoConfig.Tint;
         this.config.Highlights = redoConfig.Highlights;
         this.config.Shadow = redoConfig.Shadow;
-        this.config.Black = redoConfig.Black;
-        this.config.White = redoConfig.White;
+        this.config.Blacks = redoConfig.Blacks;
+        this.config.Whites = redoConfig.Whites;
         this.config.Contrast = redoConfig.Contrast;
         this.config.Saturation = redoConfig.Saturation;
         this.config.Vibrance = redoConfig.Vibrance;
@@ -259,8 +225,8 @@ export class HonchoEditorClass implements HonchoEditor {
         Tint: 0,
         Highlights: 0,
         Shadow: 0,
-        Black: 0,
-        White: 0,
+        Blacks: 0,
+        Whites: 0,
         Contrast: 0,
         Saturation: 0,
         Vibrance: 0,
@@ -272,8 +238,8 @@ export class HonchoEditorClass implements HonchoEditor {
     this.config.Tint = 0;
     this.config.Highlights = 0;
     this.config.Shadow = 0;
-    this.config.Black = 0;
-    this.config.White = 0;
+    this.config.Blacks = 0;
+    this.config.Whites = 0;
     this.config.Contrast = 0;
     this.config.Saturation = 0;
     this.config.Vibrance = 0;

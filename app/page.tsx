@@ -44,8 +44,8 @@ export default function Home() {
     Tint: 0,
     Highlights: 0,
     Shadow: 0,
-    Black: 0,
-    White: 0,
+    Blacks: 0,
+    Whites: 0,
     Contrast: 0,
     Saturation: 0,
     Vibrance: 0,
@@ -117,8 +117,8 @@ export default function Home() {
         Tint: 0,
         Highlights: 0,
         Shadow: 0,
-        Black: 0,
-        White: 0,
+        Blacks: 0,
+        Whites: 0,
         Contrast: 0,
         Saturation: 0,
         Vibrance: 0,
@@ -270,13 +270,13 @@ export default function Home() {
                 </div>
                 <div>
                   <label>
-                    Blacks: {adjustments.Black}
+                    Blacks: {adjustments.Blacks}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={adjustments.Black}
+                      value={adjustments.Blacks}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Blacks, Number(e.target.value))
                       }/>
@@ -284,13 +284,13 @@ export default function Home() {
                 </div>
                 <div>
                   <label>
-                    Whites: {adjustments.White}
+                    Whites: {adjustments.Whites}
                     <input
                       type="range"
                       min="-100"
                       max="100"
                       step="1"
-                      value={adjustments.White}
+                      value={adjustments.Whites}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Whites, Number(e.target.value))
                       }/>

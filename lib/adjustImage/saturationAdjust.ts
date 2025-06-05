@@ -1,6 +1,7 @@
 import cv from "@techstark/opencv-js";
 
 function hueShiftedProcess(imageToProcess: cv.Mat): cv.Mat {
+  const cleanUp: cv.Mat[] = [];
   try {
     const hsvImage = new cv.Mat();
     cv.cvtColor(imageToProcess, hsvImage, cv.COLOR_BGR2HSV);
@@ -18,6 +19,7 @@ function hueShiftedProcess(imageToProcess: cv.Mat): cv.Mat {
     cv.threshold(h, mask2, 170, 1, cv.THRESH_BINARY);
     cv.addWeighted(mask1, 1, mask2, 1, 0, redMask);
     cv.GaussianBlur(redMask, redMask, { width: 11, height: 11 }, 0);
+    cleanUp.push(mask1, mask2);
 
     const hShifted = new cv.Mat();
     cv.convertScaleAbs(h, hShifted, 1, redMask.data[0] * -5);
@@ -32,25 +34,21 @@ function hueShiftedProcess(imageToProcess: cv.Mat): cv.Mat {
 
     const bgrResult = new cv.Mat();
     cv.cvtColor(hsvShifted, bgrResult, cv.COLOR_HSV2BGR);
-
-    hsvImage.delete();
-    channels.delete();
-    redMask.delete();
-    mask1.delete();
-    mask2.delete();
-    hShifted.delete();
-    hsvShifted.delete();
-    mergeChannels.delete();
+    cleanUp.push(redMask, hShifted, hsvImage);
 
     return bgrResult;
   } catch (error) {
     console.error("Hue shift processing failed:", error);
     return imageToProcess;
+  } finally {
+    cleanUp.forEach((mat) => mat.delete());
   }
 }
 
 // -- Implement from for saturation
 async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<cv.Mat> {
+  const cleanUp: cv.Mat[] = [];
+
   try {
     const srcClone = src.clone();
     if (!srcClone || srcClone.empty()) {
@@ -68,6 +66,7 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
     const lum = labChannels.get(0);
     const oriA = labChannels.get(1);
     const oriB = labChannels.get(2);
+    cleanUp.push(originalImage, labImage);
 
     const satRatio = 1 + saturation / 100.0;
     const aTemp = new cv.Mat();
@@ -86,9 +85,11 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
     mergeChannels.push_back(aTemp);
     mergeChannels.push_back(bTemp);
     cv.merge(mergeChannels, labAdjusted);
+    cleanUp.push(aTemp, bTemp);
 
     let adjustedImage = new cv.Mat();
     cv.cvtColor(labAdjusted, adjustedImage, cv.COLOR_Lab2BGR);
+    cleanUp.push(labAdjusted);
 
     if (saturation < 0) {
       const hueShiftedImage = hueShiftedProcess(adjustedImage);
@@ -98,21 +99,14 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
 
     const finalImage = new cv.Mat();
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
-
-    srcClone.delete();
-    originalImage.delete();
-    labImage.delete();
-    labChannels.delete();
-    aTemp.delete();
-    bTemp.delete();
-    labAdjusted.delete();
-    mergeChannels.delete();
-    adjustedImage.delete();
+    cleanUp.push(adjustedImage);
 
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_saturation:", error);
     throw error;
+  } finally {
+    cleanUp.forEach((mat) => mat.delete());
   }
 }
 

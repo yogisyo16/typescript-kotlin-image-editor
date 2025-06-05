@@ -2,6 +2,8 @@ import cv from "@techstark/opencv-js"
 
 // -- Low Channel for highlight
 function boostLowChannel(scaleRatio: number, originalMat: cv.Mat): cv.Mat {
+  const cleanUp: cv.Mat[] = [];
+
   try {
     const adjustedImage = originalMat.clone();
     const highlightFactor = scaleRatio;
@@ -23,20 +25,22 @@ function boostLowChannel(scaleRatio: number, originalMat: cv.Mat): cv.Mat {
     cv.merge(channels, hsvImage);
 
     cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
-
-    hsvImage.delete();
-    channels.delete();
-    scaledValue.delete();
+    
+    cleanUp.push(hsvImage, channels as any, scaledValue);
 
     return adjustedImage;
   } catch (error) {
     console.error("Highlight boost failed:", error);
     return originalMat;
+  } finally {
+    cleanUp.forEach((mat) => mat.delete());
   }
 }
 
 // -- Implement adjustment Highlights
 async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv.Mat> {
+  const cleanUp: cv.Mat[] = [];
+
   try {
     const srcClone = src.clone();
     if (!srcClone || srcClone.empty()) {
@@ -45,11 +49,13 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
 
     const originalImage = new cv.Mat();
     cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
+    cleanUp.push(srcClone);
 
     const highlightFactor = highlight / 100;
 
     const hsvImage = new cv.Mat();
     cv.cvtColor(originalImage, hsvImage, cv.COLOR_BGR2HSV);
+    cleanUp.push(originalImage);
 
     const channels = new cv.MatVector();
     cv.split(hsvImage, channels);
@@ -70,6 +76,7 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
 
     let adjustedImage = new cv.Mat();
     cv.cvtColor(hsvImage, adjustedImage, cv.COLOR_HSV2BGR);
+    cleanUp.push(hsvImage, channels as any, scaledValue);
 
     if (highlightFactor >= 0) {
       const boostedImage = boostLowChannel(highlightFactor, adjustedImage);
@@ -79,18 +86,14 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
 
     const finalImage = new cv.Mat();
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
-
-    srcClone.delete();
-    originalImage.delete();
-    hsvImage.delete();
-    channels.delete();
-    scaledValue.delete();
-    adjustedImage.delete();
+    cleanUp.push(adjustedImage);
 
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_highlights:", error);
     throw error;
+  } finally {
+    cleanUp.forEach((mat) => mat.delete());
   }
 }
 

@@ -1,7 +1,9 @@
 import cv from "@techstark/opencv-js";
 
 function boostRedVibrance(aChannel: cv.Mat, oriA: cv.Mat, saturationFactor: number): cv.Mat {
-  try {
+    const cleanUp: cv.Mat[] = [];
+
+    try {
       // Validate inputs
       if (aChannel.empty() || oriA.empty()) {
           throw new Error("Input matrices are empty");
@@ -32,23 +34,21 @@ function boostRedVibrance(aChannel: cv.Mat, oriA: cv.Mat, saturationFactor: numb
       cv.multiply(redMask, redScale, aBoost);
       const aAdjusted = new cv.Mat();
       cv.add(aChannel32F, aBoost, aAdjusted);
-
-      // Clean up
-      redMask.delete();
-      maskScale.delete();
-      redScale.delete();
-      aBoost.delete();
-      aChannel32F.delete();
+      cleanUp.push(redMask, maskScale, redScale, aBoost, aChannel32F);
 
       return aAdjusted;
-  } catch (error) {
+    } catch (error) {
       console.error("Red vibrance boost failed:", error);
       return aChannel.clone();
-  }
+    } finally {
+      cleanUp.forEach((mat) => mat.delete());
+    }
 }
 
 // -- Implement from python for vibrance
 async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Mat> {
+    const cleanUp: cv.Mat[] = [];
+
     try {
       // Clone input image
       const srcClone = src.clone();
@@ -59,9 +59,11 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       // Convert to BGR and then to Lab
       const originalImage = new cv.Mat();
       cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
+      cleanUp.push(srcClone);
 
       const labImage = new cv.Mat();
       cv.cvtColor(originalImage, labImage, cv.COLOR_BGR2Lab);
+      cleanUp.push(originalImage);
 
       // Split Lab channels
       const labChannels = new cv.MatVector();
@@ -69,6 +71,7 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       const lum = labChannels.get(0); // L channel (luminance)
       const oriA = labChannels.get(1); // a channel (green-red)
       const oriB = labChannels.get(2); // b channel (blue-yellow)
+      cleanUp.push(labImage, labChannels as any);
 
       // Calculate vibrance factor (0 to 1 for vibrance 0 to 100)
       const saturationFactor = vibrance / 100.0;
@@ -104,6 +107,7 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       if (vibrance > 0) {
           finalA = boostRedVibrance(aTemp, oriA32F, saturationFactor);
       }
+      cleanUp.push(aTemp, scaleMat, oriA32F, neutralMat, aDiff, bDiff);
 
       // Convert channels to CV_8U and clamp
       finalA.convertTo(finalA, cv.CV_8U);
@@ -121,40 +125,26 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       mergeChannels.push_back(finalA);
       mergeChannels.push_back(bTemp);
       cv.merge(mergeChannels, labAdjusted);
+      cleanUp.push(mergeChannels as any, bTemp, lum);
+      if (vibrance > 0 && finalA !== aTemp) {
+          cleanUp.push(finalA);
+      }
 
       // Convert back to BGR and then RGB
       const adjustedImage = new cv.Mat();
       cv.cvtColor(labAdjusted, adjustedImage, cv.COLOR_Lab2BGR);
+      cleanUp.push(labAdjusted);
 
       const finalImage = new cv.Mat();
       cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
-
-      // Clean up
-      srcClone.delete();
-      originalImage.delete();
-      labImage.delete();
-      labChannels.delete();
-      lum.delete();
-      oriA.delete();
-      oriB.delete();
-      aTemp.delete();
-      bTemp.delete();
-      aDiff.delete();
-      bDiff.delete();
-      neutralMat.delete();
-      scaleMat.delete();
-      labAdjusted.delete();
-      mergeChannels.delete();
-      adjustedImage.delete();
-      oriA32F.delete();
-      if (vibrance > 0 && finalA !== aTemp) {
-          finalA.delete();
-      }
+      cleanUp.push(adjustedImage);
 
       return finalImage;
   } catch (error) {
       console.error("Error in modify_image_vibrance:", error);
       throw error;
+  } finally {
+      cleanUp.forEach((mat) => mat.delete());
   }
 }
 
