@@ -131,7 +131,7 @@ export class HonchoEditorClass implements HonchoEditor {
       }
 
       // After all adjustments, update the main editable image
-      this.currentImageEdit.delete();
+      // this.currentImageEdit.delete();
       this.currentImageEdit = imageToProcess;
 
     } catch (err) {
