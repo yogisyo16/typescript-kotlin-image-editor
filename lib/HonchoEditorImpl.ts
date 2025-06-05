@@ -182,6 +182,7 @@ export class HonchoEditorClass implements HonchoEditor {
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+    // console.log(this.config);
   }
 
   configHistotrypush() {
