@@ -2,8 +2,8 @@ import cv from "@techstark/opencv-js";
 
 export async function computeDelta(
     originalImage: cv.Mat,
-    adjustmentFunction: (image: cv.Mat, value: number) => Promise<cv.Mat>,
     value: number,
+    adjustmentFunction: (image: cv.Mat, value: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
     const cleanup: cv.Mat[] = [];
     try {

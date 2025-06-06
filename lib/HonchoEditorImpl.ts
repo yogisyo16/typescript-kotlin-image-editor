@@ -119,8 +119,9 @@ export class HonchoEditorClass implements HonchoEditor {
         if (adjustment.value !== 0) {
           console.log("Applying:", adjustment.name);
           const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
+          const deltaMat = await computeDelta(imageToProcess, adjustment.value, adjustment.func);
           imageToProcess.delete(); 
-          imageToProcess = resultOfThisStep;
+          imageToProcess = deltaMat;
         }
       }
 
