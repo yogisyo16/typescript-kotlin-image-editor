@@ -18,6 +18,12 @@ export enum AdjustType {
   Shadow, Blacks, Whites, Contrast, Vibrance, Saturation
 }
 
+export interface Adjustment {
+    value: number;
+    func: (image: cv.Mat, value: number) => Promise<cv.Mat>;
+    name: string;
+}
+
 export interface HonchoEditor {
   consume(serverConfig: Config[]): string;
   // Image getter

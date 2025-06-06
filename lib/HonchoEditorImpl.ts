@@ -1,6 +1,5 @@
 import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
-import cleanAndExecuteAdjustment from "@/lib/adjustExt/cleanAdjust";
-import { computeDelta } from "@/lib/adjustExt/adjustmentProcessor"; 
+import computeDelta from "@/lib/adjustExt/adjustmentProcessor"; 
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
 import modifyImageTint from "@/lib/adjustImage/tintAdjust";
@@ -119,12 +118,11 @@ export class HonchoEditorClass implements HonchoEditor {
         if (adjustment.value !== 0) {
           console.log("Applying:", adjustment.name);
           const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
+          const deltaValue = await computeDelta(this.inputImage, adjustment.value, adjustment.func);
           imageToProcess.delete(); 
           imageToProcess = resultOfThisStep;
         }
       }
-
-      // After all adjustments, update the main editable image
       // this.currentImageEdit.delete();
       this.currentImageEdit = imageToProcess;
 
