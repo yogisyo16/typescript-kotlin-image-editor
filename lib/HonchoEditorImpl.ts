@@ -15,8 +15,6 @@ import { useState } from "react";
 
 // Hook to manage and setup OpenCV
 export function useOpenCV() {
-  // const imgRef = React.createRef<HTMLImageElement>();
-  // const canvasRef = React.createRef<HTMLCanvasElement>();
   const [isCvLoaded, setIsCvLoaded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
