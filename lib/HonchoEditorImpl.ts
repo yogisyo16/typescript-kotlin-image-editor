@@ -121,7 +121,8 @@ export class HonchoEditorClass implements HonchoEditor {
           console.log(`Applying: ${adjustment.name}`);
           // Apply the adjustment function to the current state of the image
           const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
-          
+          // Corrected line
+          const deltaValue = await computeDelta(this.inputImage, adjustment.value, adjustment.func);
           // IMPORTANT: Delete the previous image state to prevent memory leaks
           imageToProcess.delete(); 
           
@@ -147,6 +148,7 @@ export class HonchoEditorClass implements HonchoEditor {
     if (this.config[key] === value) return;
     this.config[key] = value;
     await this.applyAllAdjustments();
+    this.configHistory;
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
   }

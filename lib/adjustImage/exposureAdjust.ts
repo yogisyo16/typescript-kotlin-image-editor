@@ -61,6 +61,8 @@ async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> 
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
     // console.log(finalHSV);
+    console.log("Source channels: ", src.channels(), "Source Type: ", src.type());
+    console.log("Exposure Adjusted: ", finalHSV.channels(), "Exposure Type: ", finalHSV.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);
