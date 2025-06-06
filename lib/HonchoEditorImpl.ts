@@ -1,6 +1,6 @@
 import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
 import cleanAndExecuteAdjustment from "@/lib/adjustExt/cleanAdjust";
-import { computeDelta } from "@/lib/adjustExt/adjustmentProcessor"; 
+import computeDelta from "@/lib/adjustExt/adjustmentProcessor"; 
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
 import modifyImageTint from "@/lib/adjustImage/tintAdjust";
