@@ -1,5 +1,5 @@
 import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
-import computeDelta from "@/lib/adjustExt/adjustmentProcessor"; 
+import applyAllAdjustments from "@/lib/adjustExt/adjustmentProcessor"; 
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
 import modifyImageTint from "@/lib/adjustImage/tintAdjust";
@@ -94,51 +94,66 @@ export class HonchoEditorClass implements HonchoEditor {
     return inputImage.clone(); // Clone to avoid modifying the input
   }
   
-  private async applyAllAdjustments(): Promise<void> {
-    let imageToProcess = this.inputImage.clone();
+  // private async applyAllAdjustments(): Promise<void> {
+  //   let imageToProcess = this.inputImage.clone();
     
-    try {
-      // This defines a professional and logical order of operations.
-      const adjustmentPipeline = [
-        // Basic tonal adjustments
-        { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
-        { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
-        { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
-        { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
-        { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
-        { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-        // Color adjustments
-        { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
-        { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
-        { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
-        { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
-      ];
+  //   try {
+  //     // This defines a professional and logical order of operations.
+  //     const adjustmentPipeline = [
+  //       // Basic tonal adjustments
+  //       { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+  //       { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+  //       { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+  //       { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+  //       { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+  //       { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+  //       // Color adjustments
+  //       { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+  //       { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
+  //       { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+  //       { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+  //     ];
 
-      for (const adjustment of adjustmentPipeline) {
-        if (adjustment.value !== 0) {
-          console.log("Applying:", adjustment.name);
-          const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
-          const deltaValue = await computeDelta(this.inputImage, adjustment.value, adjustment.func);
-          imageToProcess.delete(); 
-          imageToProcess = resultOfThisStep;
-        }
-      }
-      // this.currentImageEdit.delete();
-      this.currentImageEdit = imageToProcess;
+  //     for (const adjustment of adjustmentPipeline) {
+  //       if (adjustment.value !== 0) {
+  //         console.log("Applying:", adjustment.name);
+  //         const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
+  //         const deltaValue = await computeDelta(this.inputImage, adjustment.value, adjustment.func);
+  //         imageToProcess.delete(); 
+  //         imageToProcess = resultOfThisStep;
+  //       }
+  //     }
+  //     // this.currentImageEdit.delete();
+  //     this.currentImageEdit = imageToProcess;
 
-    } catch (err) {
-      console.error("An error occurred during the adjustment pipeline:", err);
-      // If any step fails, clean up the intermediate image and revert to the original.
-      if (imageToProcess) imageToProcess.delete();
-      this.currentImageEdit = this.inputImage.clone();
-    }
-  }
+  //   } catch (err) {
+  //     console.error("An error occurred during the adjustment pipeline:", err);
+  //     // If any step fails, clean up the intermediate image and revert to the original.
+  //     if (imageToProcess) imageToProcess.delete();
+  //     this.currentImageEdit = this.inputImage.clone();
+  //   }
+  // }
 
   async adjust(type: AdjustType, value: number): Promise<void> {
     const key = AdjustType[type] as keyof Config;
     if (this.config[key] === value) return;
     this.config[key] = value;
-    await this.applyAllAdjustments();
+    const adjustmentPipeline = [
+      // Basic tonal adjustments
+      { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+      { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+      { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+      { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+      { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+      { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+      // Color adjustments
+      { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+      { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
+      { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+      { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+    ];
+    const newImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
+    this.currentImageEdit = newImage;
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
   }
