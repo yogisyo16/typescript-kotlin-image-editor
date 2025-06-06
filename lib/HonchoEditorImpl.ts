@@ -184,14 +184,8 @@ export class HonchoEditorClass implements HonchoEditor {
       if (currentState) {
         this.redoStack.push(currentState);
       }
-
-      // Get the top of the history, which is now the state we want to revert to.
       const previousState = this.configHistory[this.configHistory.length - 1];
       this.config = { ...previousState }; // Update the internal config
-
-      // --- THIS IS THE MISSING LOGIC ---
-      // Now that the config is reverted, we must re-process the image
-      // and notify the listeners, just like in the 'adjust' method.
 
       const adjustmentPipeline = [
         { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
@@ -213,7 +207,6 @@ export class HonchoEditorClass implements HonchoEditor {
 
       this.listener?.onImageRendered(this.currentImageEdit);
       this.listener?.onConfigChange(this.config);
-      // --- END OF MISSING LOGIC ---
 
     } else {
       console.log("Cannot undo. At original state.");
@@ -227,7 +220,6 @@ export class HonchoEditorClass implements HonchoEditor {
         this.configHistory.push(redoState);
         this.config = { ...redoState };
 
-        // --- ALSO ADD THE MISSING LOGIC HERE ---
         const adjustmentPipeline = [
           { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
           { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
@@ -261,14 +253,11 @@ export class HonchoEditorClass implements HonchoEditor {
     };
 
     this.config = { ...initialConfig };
-    this.configHistory = [initialConfig]; // Reset history to just the initial state
-    this.redoStack = []; // Clear the redo stack
+    this.configHistory = [initialConfig];
+    this.redoStack = [];
 
-    // --- ALSO ADD THE MISSING LOGIC HERE ---
-    // For reset, we can just render the original image directly
-    // since all adjustments are zero.
     if (this.currentImageEdit) this.currentImageEdit.delete();
-    this.currentImageEdit = this.inputImage.clone(); // Use a clone
+    this.currentImageEdit = this.inputImage.clone();
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
