@@ -1,5 +1,3 @@
-// In adjustmentProcessor.ts
-
 import cv from "@techstark/opencv-js";
 import { Adjustment } from "@/lib/HonchoEditor";
 
@@ -13,7 +11,6 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
         for (const adjustment of adjustmentPipeline) {
             if (adjustment.value !== 0) {
                 console.log("Applying delta for:", adjustment.name);
-                // Call our new, smarter computeDelta
                 const deltaMat = await computeDelta(imageToProcess16S, adjustment.value, adjustment.func);
                 cv.add(imageToProcess16S, deltaMat, imageToProcess16S);
                 deltaMat.delete();
@@ -33,10 +30,8 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
     }
 }
 
-
-// --- THIS IS THE FULLY REWRITTEN AND CORRECTED FUNCTION ---
 async function computeDelta(
-    image16S: cv.Mat, // Renamed for clarity: this is a 16-bit signed Mat
+    image16S: cv.Mat,
     value: number,
     adjustmentFunction: (image: cv.Mat, value: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
@@ -73,7 +68,7 @@ async function computeDelta(
 
     } catch (err) {
         console.error("Failed inside computeDelta:", (err as Error).message);
-        return new cv.Mat(); // Return an empty Mat on failure
+        return new cv.Mat();
     } finally {
         // This ensures all temporary Mats created inside this function are deleted.
         cleanup.forEach(mat => {
