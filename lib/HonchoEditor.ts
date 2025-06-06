@@ -35,9 +35,9 @@ export interface HonchoEditor {
   configHistotrypush(config: Config): void;
   
   // Config undo - redo - reset
-  undo(): Promise<void>;
-  redo(): Promise<void>;
-  reset(): void;
+  undo(config: Config): Promise<void>;
+  redo(config: Config): Promise<void>;
+  reset(config: Config): void;
 }
 
 export interface Listener {

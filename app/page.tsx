@@ -110,7 +110,7 @@ export default function Home() {
 
   const handleReset = useCallback(() => {
     if (editorRef.current) {
-      editorRef.current.reset();
+      editorRef.current.reset(adjustments);
       setAdjustments({
         Exposure: 0,
         Temperature: 0,
@@ -128,13 +128,14 @@ export default function Home() {
 
   const handleUndo = useCallback(() => {
     if (editorRef.current) {
-      editorRef.current.undo();
+      editorRef.current.undo(adjustments);
+      setAdjustments(adjustments);
     }
   }, [editorRef]);
 
   const handleRedo = useCallback(() => {
     if (editorRef.current) {
-      editorRef.current.redo();
+      editorRef.current.redo(adjustments);
     }
   }, [editorRef]);
 
@@ -207,7 +208,8 @@ export default function Home() {
                       value={adjustments.Exposure}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Exposure, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -221,7 +223,8 @@ export default function Home() {
                       value={adjustments.Temperature}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Temperature, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -235,7 +238,8 @@ export default function Home() {
                       value={adjustments.Tint}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Tint, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
               </div>
@@ -251,7 +255,8 @@ export default function Home() {
                       value={adjustments.Highlights}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Highlights, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -265,7 +270,8 @@ export default function Home() {
                       value={adjustments.Shadow}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Shadow, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -279,7 +285,8 @@ export default function Home() {
                       value={adjustments.Blacks}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Blacks, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -293,7 +300,8 @@ export default function Home() {
                       value={adjustments.Whites}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Whites, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
               </div>
@@ -309,7 +317,8 @@ export default function Home() {
                       value={adjustments.Contrast}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Contrast, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -323,7 +332,8 @@ export default function Home() {
                       value={adjustments.Saturation}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Saturation, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
                 <div>
@@ -337,7 +347,8 @@ export default function Home() {
                       value={adjustments.Vibrance}
                       onChange={(e) =>
                         handleAdjustmentChange(AdjustType.Vibrance, Number(e.target.value))
-                      }/>
+                      }
+                      onMouseUp={saveHistory}/>
                   </label>
                 </div>
               </div>

@@ -156,6 +156,7 @@ export class HonchoEditorClass implements HonchoEditor {
     this.currentImageEdit = newImage;
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+    console.log("configHistory: ", this.configHistory);
   }
 
   configHistotrypush() {
@@ -179,81 +180,99 @@ export class HonchoEditorClass implements HonchoEditor {
 
   // Logic for undo
   async undo(): Promise<void> {
-    if (this.redoStack.length >= 0) {
-      const newConfig = this.configHistory.pop();
-      const undoConfig = this.configHistory.length > 0 ? this.configHistory[this.configHistory.length - 1] : null;
-
-      if(newConfig){
-        this.redoStack.push(newConfig);
-        if (undoConfig) {
-          this.config.Exposure = undoConfig.Exposure;
-          this.config.Temperature = undoConfig.Temperature;
-          this.config.Tint = undoConfig.Tint;
-          this.config.Highlights = undoConfig.Highlights;
-          this.config.Shadow = undoConfig.Shadow;
-          this.config.Blacks = undoConfig.Blacks;
-          this.config.Whites = undoConfig.Whites;
-          this.config.Contrast = undoConfig.Contrast;
-          this.config.Saturation = undoConfig.Saturation;
-          this.config.Vibrance = undoConfig.Vibrance;  
-        }
-        // console.log("this is inside undo: ", undoConfig);
-        // console.log("inside configHistory: ", this.configHistory);
+    // You must have more than one state to undo (the initial state and at least one change).
+    if (this.configHistory.length > 1) {
+      const currentState = this.configHistory.pop();
+      if (currentState) {
+        this.redoStack.push(currentState);
       }
-    } 
-  }
 
-  async redo(): Promise<void> {
-    if (this.configHistory.length >= 0) {
-      const redoConfig = this.redoStack.pop();
-      const nowConfig = this.redoStack.length >= 0 ? this.redoStack[this.redoStack.length - 1] : null;
-      if (redoConfig) {
-        this.configHistory.push(redoConfig);
-        this.config.Exposure = redoConfig.Exposure;
-        this.config.Temperature = redoConfig.Temperature;
-        this.config.Tint = redoConfig.Tint;
-        this.config.Highlights = redoConfig.Highlights;
-        this.config.Shadow = redoConfig.Shadow;
-        this.config.Blacks = redoConfig.Blacks;
-        this.config.Whites = redoConfig.Whites;
-        this.config.Contrast = redoConfig.Contrast;
-        this.config.Saturation = redoConfig.Saturation;
-        this.config.Vibrance = redoConfig.Vibrance;
-      }
+      // Get the top of the history, which is now the state we want to revert to.
+      const previousState = this.configHistory[this.configHistory.length - 1];
+      this.config = { ...previousState }; // Update the internal config
+
+      // --- THIS IS THE MISSING LOGIC ---
+      // Now that the config is reverted, we must re-process the image
+      // and notify the listeners, just like in the 'adjust' method.
+
+      const adjustmentPipeline = [
+        { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+        { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+        { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+        { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+        { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+        { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+        { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+        { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
+        { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+        { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+      ];
+      
+      const undoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
+      
+      if (this.currentImageEdit) this.currentImageEdit.delete();
+      this.currentImageEdit = undoneImage;
+
+      this.listener?.onImageRendered(this.currentImageEdit);
+      this.listener?.onConfigChange(this.config);
+      // --- END OF MISSING LOGIC ---
+
+    } else {
+      console.log("Cannot undo. At original state.");
     }
   }
 
-  reset(): void {
-    // const mat = cv.imread(this.imgElement);
-    this.configHistory = [
-      {
-        Exposure: 0,
-        Temperature: 0,
-        Tint: 0,
-        Highlights: 0,
-        Shadow: 0,
-        Blacks: 0,
-        Whites: 0,
-        Contrast: 0,
-        Saturation: 0,
-        Vibrance: 0,
-      },
-    ];
-    this.redoStack = [];
-    this.config.Exposure = 0;
-    this.config.Temperature = 0;
-    this.config.Tint = 0;
-    this.config.Highlights = 0;
-    this.config.Shadow = 0;
-    this.config.Blacks = 0;
-    this.config.Whites = 0;
-    this.config.Contrast = 0;
-    this.config.Saturation = 0;
-    this.config.Vibrance = 0;
+  async redo(): Promise<void> {
+    if (this.redoStack.length > 0) {
+      const redoState = this.redoStack.pop();
+      if (redoState) {
+        this.configHistory.push(redoState);
+        this.config = { ...redoState };
 
-    this.listener?.onImageRendered(this.inputImage);
+        // --- ALSO ADD THE MISSING LOGIC HERE ---
+        const adjustmentPipeline = [
+          { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+          { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+          { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+          { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+          { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+          { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+          { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+          { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
+          { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+          { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+        ];
+
+        const redoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
+        if (this.currentImageEdit) this.currentImageEdit.delete();
+        this.currentImageEdit = redoneImage;
+
+        this.listener?.onImageRendered(this.currentImageEdit);
+        this.listener?.onConfigChange(this.config);
+      }
+    } else {
+      console.log("Cannot redo. At latest state.");
+    }
+  }
+
+
+  async reset(): Promise<void> { // Made async to match the pattern
+    const initialConfig = {
+      Exposure: 0, Temperature: 0, Tint: 0, Highlights: 0, Shadow: 0,
+      Blacks: 0, Whites: 0, Contrast: 0, Saturation: 0, Vibrance: 0,
+    };
+
+    this.config = { ...initialConfig };
+    this.configHistory = [initialConfig]; // Reset history to just the initial state
+    this.redoStack = []; // Clear the redo stack
+
+    // --- ALSO ADD THE MISSING LOGIC HERE ---
+    // For reset, we can just render the original image directly
+    // since all adjustments are zero.
+    if (this.currentImageEdit) this.currentImageEdit.delete();
+    this.currentImageEdit = this.inputImage.clone(); // Use a clone
+
+    this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-
-    // mat.delete();
   }
 }
