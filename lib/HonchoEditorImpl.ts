@@ -91,46 +91,6 @@ export class HonchoEditorClass implements HonchoEditor {
   onImageUpdate(inputImage: cv.Mat): cv.Mat {
     return inputImage.clone(); // Clone to avoid modifying the input
   }
-  
-  // private async applyAllAdjustments(): Promise<void> {
-  //   let imageToProcess = this.inputImage.clone();
-    
-  //   try {
-  //     // This defines a professional and logical order of operations.
-  //     const adjustmentPipeline = [
-  //       // Basic tonal adjustments
-  //       { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
-  //       { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
-  //       { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
-  //       { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
-  //       { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
-  //       { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-  //       // Color adjustments
-  //       { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
-  //       { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
-  //       { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
-  //       { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
-  //     ];
-
-  //     for (const adjustment of adjustmentPipeline) {
-  //       if (adjustment.value !== 0) {
-  //         console.log("Applying:", adjustment.name);
-  //         const resultOfThisStep = await adjustment.func(imageToProcess, adjustment.value);
-  //         const deltaValue = await computeDelta(this.inputImage, adjustment.value, adjustment.func);
-  //         imageToProcess.delete(); 
-  //         imageToProcess = resultOfThisStep;
-  //       }
-  //     }
-  //     // this.currentImageEdit.delete();
-  //     this.currentImageEdit = imageToProcess;
-
-  //   } catch (err) {
-  //     console.error("An error occurred during the adjustment pipeline:", err);
-  //     // If any step fails, clean up the intermediate image and revert to the original.
-  //     if (imageToProcess) imageToProcess.delete();
-  //     this.currentImageEdit = this.inputImage.clone();
-  //   }
-  // }
 
   async adjust(type: AdjustType, value: number): Promise<void> {
     const key = AdjustType[type] as keyof Config;
@@ -261,5 +221,9 @@ export class HonchoEditorClass implements HonchoEditor {
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+
+    // console.log("configHistory: ", this.configHistory);
+    // console.log("redoStack: ", this.redoStack);
+    // console.log("Looking at log: ", this.config);
   }
 }
