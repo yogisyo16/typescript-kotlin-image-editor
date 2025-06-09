@@ -380,7 +380,6 @@ async function boostWarmTemperature(
   }
 }
 
-// --- CORRECTED modifyImageTemperature ---
 async function modifyImageTemperature(
   src: cv.Mat,
   colorTemperature: number

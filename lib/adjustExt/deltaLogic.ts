@@ -17,7 +17,7 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
             }
         }
 
-        // Checking the final image
+        // Checking the Original Image
         console.log("Original image Matix: ", originalImage.channels(), "Original Type: ", originalImage.type());
         console.log("Original image Matix: ", imageToProcess16S.channels(), "Original Type: ", imageToProcess16S.type());
 
@@ -26,6 +26,7 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
         imageToProcess16S.convertTo(finalImage, finalConversionType); // Convert back to 8-bit (to make sure is converted)
         imageToProcess16S.delete();
 
+        // Checking the final image
         console.log("Final image Matix: ", finalImage.channels(), "Final Type: ", finalImage.type());
         return finalImage;
 
@@ -93,6 +94,5 @@ async function computeDelta(
         });
     }
 }
-
 
 export default applyAllAdjustments;

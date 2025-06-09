@@ -85,7 +85,7 @@ export default function Home() {
       img.onload = () => {
         if (isCvLoaded) {
           const mat = cv.imread(img);
-          const resizedMat = resizeMatToFit(mat, 640, 360);
+          const resizedMat = resizeMatToFit(mat, 500, 500);
           mat.delete(); // Clean up original high-res Mat// will comment this after doing unit test later on after this projects
           setOriginalMat(resizedMat);
 
@@ -169,7 +169,7 @@ export default function Home() {
         {isCvLoaded && (
           <div>
             <div className="flex flex-row items-center">
-              <div className="flex flex-col mr-4 items-start">
+              <div className="flex flex-col mr-4 items-center">
                 <label>
                   Upload Image:
                   <input
@@ -358,16 +358,16 @@ export default function Home() {
                 <h3 className="text-sm">Original</h3>
                 <canvas
                   ref={originalCanvasRef}
-                  width={640}
-                  height={360}
+                  width={500}
+                  height={500}
                 />
               </div>
               <div>
                 <h3 className="text-sm">Processed</h3>
                 <canvas
                   ref={canvasRef}
-                  width={640}
-                  height={360}
+                  width={500}
+                  height={500}
                 />
               </div>
             </div>
