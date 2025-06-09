@@ -1,5 +1,5 @@
 import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
-import applyAllAdjustments from "@/lib/adjustExt/adjustmentProcessor"; 
+import applyAllAdjustments from "@/lib/adjustExt/deltaLogic"; 
 import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
 import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
 import modifyImageTint from "@/lib/adjustImage/tintAdjust";
@@ -114,7 +114,7 @@ export class HonchoEditorClass implements HonchoEditor {
     this.currentImageEdit = newImage;
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-    console.log("configHistory: ", this.configHistory);
+    // console.log("configHistory: ", this.configHistory);
   }
 
   configHistotrypush() {
@@ -221,9 +221,5 @@ export class HonchoEditorClass implements HonchoEditor {
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-
-    // console.log("configHistory: ", this.configHistory);
-    // console.log("redoStack: ", this.redoStack);
-    // console.log("Looking at log: ", this.config);
   }
 }
