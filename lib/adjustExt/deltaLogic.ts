@@ -4,16 +4,17 @@ import { convertTo16BitImage, convert8BitImage } from "@/lib/adjustExt/bitImageC
 
 async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Adjustment[]): Promise<cv.Mat> {
     const newOriginalImage = convertTo16BitImage(originalImage);
+    let plusDelta = new cv.Mat();
 
     try {
         for (const adjustment of adjustmentPipeline) {
             if (adjustment.score !== 0) {
                 const deltaMat = await computeDelta(newOriginalImage, adjustment.score, adjustment.func);
-                cv.add(newOriginalImage, deltaMat, newOriginalImage);
-                deltaMat.delete();
+                plusDelta = await addTotalDelta(newOriginalImage, deltaMat);
+                // deltaMat.delete();
             }
         }
-        const finalImage = convert8BitImage(newOriginalImage);
+        const finalImage = convert8BitImage(plusDelta);
         return finalImage;
 
     } catch (err) {
@@ -43,6 +44,12 @@ async function computeDelta(
             if (mat && !mat.isDeleted()) mat.delete();
         });
     }
+}
+
+async function addTotalDelta(originalImage: cv.Mat, adjustedImage: cv.Mat): Promise<cv.Mat> {
+    const deltaMat = new cv.Mat();
+    cv.add(originalImage, adjustedImage, deltaMat);
+    return deltaMat;
 }
 
 export default applyAllAdjustments;
