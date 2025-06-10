@@ -77,12 +77,15 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
     }
 
     const cleanup: cv.Mat[] = [];
+    const srcClone = src.clone();
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
     try {
         if (whitesValue > 0) {
             // --- POSITIVE WHITES LOGIC (YUV Method - Confirmed Working) ---
             const hsv = new cv.Mat();
             cleanup.push(hsv);
-            cv.cvtColor(src, hsv, cv.COLOR_BGR2HSV);
+            cv.cvtColor(srcClone, hsv, cv.COLOR_BGR2HSV);
             const hsvChannels = new cv.MatVector();
             cleanup.push(hsvChannels as any);
             cv.split(hsv, hsvChannels);
@@ -102,7 +105,7 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
 
             const yuvImg = new cv.Mat();
             cleanup.push(yuvImg);
-            cv.cvtColor(src, yuvImg, cv.COLOR_BGR2YUV);
+            cv.cvtColor(srcClone, yuvImg, cv.COLOR_BGR2YUV);
             
             const yuvChannels = new cv.MatVector();
             cleanup.push(yuvChannels as any);
@@ -161,7 +164,7 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
             const boostedImage = boostColourFromWhite(adjustedImage, whiteBoostRatio); cleanup.push(boostedImage);
 
             const resultHsv = new cv.Mat(); cleanup.push(resultHsv);
-            const srcHsv = hsv; // Reuse from above
+            const srcCloneHsv = hsv; // Reuse from above
             cv.cvtColor(boostedImage, resultHsv, cv.COLOR_BGR2HSV);
             const resultHsvChannels = new cv.MatVector(); cleanup.push(resultHsvChannels as any);
             cv.split(resultHsv, resultHsvChannels);
@@ -175,13 +178,18 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
 
             const finalImage = new cv.Mat();
             cv.cvtColor(finalHsv, finalImage, cv.COLOR_HSV2BGR);
+            cv.cvtColor(finalImage, finalImage, cv.COLOR_BGR2BGRA);
+
+            const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+            finalImage.convertTo(finalImage, image16Bit);
+
             return finalImage;
 
         } else {
             // --- NEGATIVE WHITES LOGIC (LAB Method - from Kotlin reference) ---
             const labImg = new cv.Mat();
             cleanup.push(labImg);
-            cv.cvtColor(src, labImg, cv.COLOR_BGR2Lab);
+            cv.cvtColor(srcClone, labImg, cv.COLOR_BGR2Lab);
 
             const labChannels = new cv.MatVector();
             cleanup.push(labChannels as any);
@@ -217,7 +225,7 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
 
             const srcFloat = new cv.Mat();
             cleanup.push(srcFloat);
-            src.convertTo(srcFloat, cv.CV_32FC3);
+            srcClone.convertTo(srcFloat, cv.CV_32FC3);
 
             const srcChannels = new cv.MatVector();
             cleanup.push(srcChannels as any);
@@ -232,7 +240,10 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
             cv.merge(srcChannels, finalImageFloat);
 
             const finalImage = new cv.Mat();
-            finalImageFloat.convertTo(finalImage, cv.CV_8UC3);
+            finalImageFloat.convertTo(finalImage, cv.CV_8UC4);
+
+            const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+            finalImage.convertTo(finalImage, image16Bit);
 
             return finalImage;
         }

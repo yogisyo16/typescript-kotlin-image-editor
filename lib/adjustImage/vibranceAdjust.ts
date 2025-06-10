@@ -56,6 +56,9 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
         throw new Error("Input image is empty");
       }
 
+      srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+      srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+
       // Convert to BGR and then to Lab
       const originalImage = new cv.Mat();
       cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
@@ -136,8 +139,13 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       cleanUp.push(labAdjusted);
 
       const finalImage = new cv.Mat();
+
       cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+      cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
       cleanUp.push(adjustedImage);
+
+      const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+      finalImage.convertTo(finalImage, image16Bit);
 
       return finalImage;
   } catch (error) {

@@ -369,6 +369,8 @@ async function boostWarmTemperature(
     
     cv.merge(channels, originalMat);
     originalMat.convertTo(originalMat, cv.CV_8U);
+    const image16Bit = originalMat.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    originalMat.convertTo(originalMat, image16Bit);
 
     return originalMat;
   } catch (error) {
@@ -389,32 +391,31 @@ async function modifyImageTemperature(
   }
 
   const cleanUp: cv.Mat[] = [];
-  const originalMat = src.clone();
-  cleanUp.push(originalMat);
+  const srcClone = src.clone();
+  
+  srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+  srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+
+  cleanUp.push(srcClone);
   
   try {
     // This is the main logical change. We separate the warm and cool paths entirely.
     if (colorTemperature > 0) {
-      // WARM PATH:
-      // Call the simple, direct BGR function. It does not need any LAB factors.
-      await boostWarmTemperature(colorTemperature, originalMat);
+      await boostWarmTemperature(colorTemperature, srcClone);
     } else {
-      // COOL PATH:
-      // This path REQUIRES the LAB conversion to get its adjustment factors.
-      // We only run the cvtColor code when we absolutely need it.
-      cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
+      cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
 
       const labImage = new cv.Mat();
       const labChannels = new cv.MatVector();
       const lum = new cv.Mat();
       const lumNorm = new cv.Mat();
       const lumSub = new cv.Mat();
-      const ones = cv.Mat.ones(originalMat.size(), cv.CV_32F);
+      const ones = cv.Mat.ones(srcClone.size(), cv.CV_32F);
       const bNorm = new cv.Mat();
       cleanUp.push(labImage, lum, lumNorm, lumSub, ones, bNorm);
       // Note: MatVectors are cleaned up inside the cool helper functions.
 
-      cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
+      cv.cvtColor(srcClone, labImage, cv.COLOR_BGR2Lab);
       cv.split(labImage, labChannels);
       labChannels.get(0).copyTo(lum);
 
@@ -436,15 +437,19 @@ async function modifyImageTemperature(
       // labChannels.delete(); // Clean up the vector now that we're done with it.
 
       if (colorTemperature >= -50) {
-        await boostCoolLowerHalf(colorTemperature, originalMat, lumScalingFactor, bLabBoostFactor, blueScaleScore);
+        await boostCoolLowerHalf(colorTemperature, srcClone, lumScalingFactor, bLabBoostFactor, blueScaleScore);
       } else {
-        await boostCoolUpperHalf(colorTemperature, originalMat, lumScalingFactor, bLabBoostFactor, blueScaleScore);
+        await boostCoolUpperHalf(colorTemperature, srcClone, lumScalingFactor, bLabBoostFactor, blueScaleScore);
       }
     }
     
     // Convert the final result for display
-    cv.cvtColor(originalMat, originalMat, cv.COLOR_BGR2RGB);
-    const result = originalMat.clone();
+    cv.cvtColor(srcClone, srcClone, cv.COLOR_BGR2RGB);
+    cv.cvtColor(srcClone, srcClone, cv.COLOR_RGB2RGBA);
+
+    const result = srcClone.clone();
+    const image16Bit = result.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    result.convertTo(result, image16Bit);
     return result;
 
   } catch (error) {

@@ -4,13 +4,16 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
   const cleanUp: cv.Mat[] = [];
 
   try {
-    const originalMat = src.clone();
+    const srcClone = src.clone();
+
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
     // Ensure input is 3 channels (BGR) to avoid RGBA issues
-    cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
+    cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
 
     const originalHsvMat = new cv.Mat();
-    cv.cvtColor(originalMat, originalHsvMat, cv.COLOR_BGR2HSV);
+    cv.cvtColor(srcClone, originalHsvMat, cv.COLOR_BGR2HSV);
 
     const hsvChannels: cv.MatVector = new cv.MatVector();
     cv.split(originalHsvMat, hsvChannels);
@@ -27,7 +30,7 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     }
 
     const imageFloat = new cv.Mat();
-    originalMat.convertTo(imageFloat, cv.CV_64FC3);
+    srcClone.convertTo(imageFloat, cv.CV_64FC3);
 
     // Multiply by factor using a Mat
     const factorMat = new cv.Mat(imageFloat.rows, imageFloat.cols, cv.CV_64FC3, new cv.Scalar(factor, factor, factor));
@@ -37,13 +40,13 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     // Create a Mat for max score (255) instead of Scalar
     const maxMat = new cv.Mat(imageFloat.rows, imageFloat.cols, cv.CV_64FC3, new cv.Scalar(255, 255, 255));
     cv.min(imageFloat, maxMat, imageFloat);
-    imageFloat.convertTo(originalMat, cv.CV_8UC3);
+    imageFloat.convertTo(srcClone, cv.CV_8UC3);
     cleanUp.push(imageFloat, maxMat);
 
     const adjustedMat = new cv.Mat();
-    cv.convertScaleAbs(originalMat, adjustedMat, 1.0, beta);
+    cv.convertScaleAbs(srcClone, adjustedMat, 1.0, beta);
 
-    const finalHSV = new cv.Mat();
+    let finalHSV = new cv.Mat();
     cv.cvtColor(adjustedMat, finalHSV, cv.COLOR_BGR2HSV);
     cleanUp.push(adjustedMat);
 
@@ -60,13 +63,11 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     cv.merge(mergedHsv, finalHSV);
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
-    // if (src.channels() === 4 && finalHSV.channels() === 3) {
-    //     const tempResult = finalHSV;
-    //     cv.cvtColor(tempResult, finalHSV, cv.COLOR_BGR2BGRA, 0);
-    //     tempResult.delete();
-    // }
-    console.log("Original image Matix compute Delta: ", src.channels(), "Original Type: ", src.type());
-    console.log("Exposure matrix compute Delta: ", finalHSV.channels(), "Original Type: ", finalHSV.type());
+    cv.cvtColor(finalHSV, finalHSV, cv.COLOR_BGR2BGRA);
+    const image16Bit = finalHSV.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    const image8Bit = finalHSV.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
+    finalHSV.convertTo(finalHSV, image8Bit);
+    console.debug("Result Type: ", finalHSV.type(), "Original Image type: ", src.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);

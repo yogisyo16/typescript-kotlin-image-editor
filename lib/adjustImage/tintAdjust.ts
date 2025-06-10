@@ -108,7 +108,7 @@ function boostMagenta(tintScale: number, originalMat: cv.Mat, lumScalingFactor: 
     finalChannels.set(1, curGreenChannels.clone());
 
     cv.merge(finalChannels, originalMat);
-    originalMat.convertTo(originalMat, cv.CV_8U);
+    originalMat.convertTo(originalMat, cv.CV_8UC4);
     cleanUp.push(finalChannels as any, curRedChannels, curGreenChannels);
 
     return originalMat;
@@ -218,7 +218,7 @@ function boostGreen(tintScale: number, originalMat: cv.Mat, lumScalingFactor: cv
     finalChannels.set(0, curBlueChannels.clone());
 
     cv.merge(finalChannels, originalMat);
-    originalMat.convertTo(originalMat, cv.CV_8U);
+    originalMat.convertTo(originalMat, cv.CV_8UC4);
 
     return originalMat;
   } catch (error) {
@@ -235,10 +235,14 @@ async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
 
   try {
     const labImage = new cv.Mat();
-    const originalMat = src.clone();
+    const srcClone = src.clone();
+
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+
     tint = tint / 10;
-    cv.cvtColor(originalMat, originalMat, cv.COLOR_BGRA2BGR);
-    cv.cvtColor(originalMat, labImage, cv.COLOR_BGR2Lab);
+    cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
+    cv.cvtColor(srcClone, labImage, cv.COLOR_BGR2Lab);
 
     const labChannels = new cv.MatVector();
     cv.split(labImage, labChannels);
@@ -268,10 +272,14 @@ async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
     cleanUp.push(bChannel, bScalarMat255, labChannels as any, bNorm, bLabBoostFactor);
 
     const adjustedMat = tint >= 0
-      ? await boostMagenta(tint, originalMat, lumScalingFactor)
-      : await boostGreen(tint, originalMat, lumScalingFactor);
+      ? await boostMagenta(tint, srcClone, lumScalingFactor)
+      : await boostGreen(tint, srcClone, lumScalingFactor);
 
     cleanUp.push(lumScalingFactor);
+    cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2BGRA);
+    
+    const image16Bit = adjustedMat.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    adjustedMat.convertTo(adjustedMat, image16Bit);
 
     return adjustedMat;
   } catch(error) {

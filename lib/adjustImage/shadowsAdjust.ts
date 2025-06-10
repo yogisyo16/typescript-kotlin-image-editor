@@ -7,6 +7,8 @@ async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat>
     if (!srcClone || srcClone.empty()) {
       throw new Error("Input image is empty");
     }
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
     const originalImage = new cv.Mat();
     cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
@@ -37,8 +39,12 @@ async function modifyImageShadows(src: cv.Mat, shadows: number): Promise<cv.Mat>
     cleanUp.push(hsvImage, channels as any, scaledValue);
 
     const finalImage = new cv.Mat();
+
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+    cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
     cleanUp.push(adjustedImage);
+    const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    finalImage.convertTo(finalImage, image16Bit);
 
     return finalImage;
   } catch (error) {

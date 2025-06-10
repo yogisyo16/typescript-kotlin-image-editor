@@ -6,6 +6,9 @@ function boostLowChannel(scaleRatio: number, originalMat: cv.Mat): cv.Mat {
 
   try {
     const adjustedImage = originalMat.clone();
+    
+    adjustedImage.convertTo(adjustedImage, originalMat.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+    
     const highlightFactor = scaleRatio;
 
     const hsvImage = new cv.Mat();
@@ -46,6 +49,8 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
     if (!srcClone || srcClone.empty()) {
       throw new Error("Input image is empty");
     }
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
     const originalImage = new cv.Mat();
     cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
@@ -85,8 +90,14 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
     }
 
     const finalImage = new cv.Mat();
+
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+    cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
+    
     cleanUp.push(adjustedImage);
+
+    const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    finalImage.convertTo(finalImage, image16Bit);
 
     return finalImage;
   } catch (error) {

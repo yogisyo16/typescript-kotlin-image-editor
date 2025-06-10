@@ -9,8 +9,13 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
       throw new Error("Input image is empty");
     }
 
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+
     const originalImage = new cv.Mat();
     cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);
+    originalImage.convertTo(originalImage, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
     const blackFactor = blacks / 100;
 
@@ -50,8 +55,12 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
     // }
 
     const finalImage = new cv.Mat();
-    cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
 
+    cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+    cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
+    const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    finalImage.convertTo(finalImage, image16Bit);
+    
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_blacks:", error);

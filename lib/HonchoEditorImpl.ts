@@ -10,6 +10,8 @@ import modifyImageWhites from "@/lib/adjustImage/whiteAdjust";
 import modifyImageContrast from "@/lib/adjustImage/contrastAdjust";
 import modifyImageSaturation from "@/lib/adjustImage/saturationAdjust";
 import modifyImageVibrance from "@/lib/adjustImage/vibranceAdjust";
+import openCVAdjustments from "@/lib/openCVAdjustment";
+import cleanAndExecuteAdjustment from "@/lib/adjustExt/adjustExt";
 import cv from "@techstark/opencv-js";
 import { useState } from "react";
 
@@ -47,7 +49,7 @@ export function useOpenCV() {
 export class HonchoEditorClass implements HonchoEditor {
   // For any Input convert into cv.Mat first
   private inputImage: cv.Mat;
-  private currentImageEdit: cv.Mat = new cv.Mat();
+  private currentImageEdit: cv.Mat;
   private listener: Listener | null = null;
   // Config variable score
   private config: Config = {
@@ -69,6 +71,7 @@ export class HonchoEditorClass implements HonchoEditor {
 
   constructor(inputImage: cv.Mat, listener: Listener) {
     this.inputImage = inputImage.clone();
+    this.currentImageEdit = this.inputImage.clone();
     this.configHistory.push({ ...this.config });
     this.listener = listener;
   }
@@ -85,34 +88,57 @@ export class HonchoEditorClass implements HonchoEditor {
 
   consume(serverConfig: Config[]): string {
     throw Error("Not implemented");
-    // return "Configs consumed";
   }
 
   onImageUpdate(inputImage: cv.Mat): cv.Mat {
-    return inputImage.clone(); // Clone to avoid modifying the input
+    return inputImage.clone();
   }
 
   async adjust(type: AdjustType, score: number): Promise<void> {
-    const key = AdjustType[type] as keyof Config;
-    if (this.config[key] === score) return;
-    this.config[key] = score;
-    const adjustmentPipeline = [
-      { score: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
-      { score: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
-      { score: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
-      { score: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
-      { score: this.config.Whites, func: modifyImageWhites, name: "Whites" },
-      { score: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-      { score: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
-      { score: this.config.Tint, func: modifyImageTint, name: "Tint" },
-      { score: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
-      { score: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
-    ];
-    const newImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
-    this.currentImageEdit = newImage;
+    if (type == AdjustType.Exposure) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
+      
+      // Update score exposure publish to UI
+      this.config.Exposure = score;
+  } else if (type == AdjustType.Temperature) {
+    this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
+
+      this.config.Temperature = score;
+  } else if (type == AdjustType.Tint) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
+
+      this.config.Tint = score;
+  } else if (type == AdjustType.Contrast) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
+
+      this.config.Contrast = score;
+  } else if (type == AdjustType.Highlights) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
+
+      this.config.Highlights = score;
+  } else if (type == AdjustType.Shadow) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
+
+      this.config.Shadow = score;
+  } else if (type == AdjustType.Blacks) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
+
+      this.config.Blacks = score;
+  } else if (type == AdjustType.Whites) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
+
+      this.config.Whites = score;
+  } else if (type == AdjustType.Saturation) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
+
+      this.config.Saturation = score;
+  } else if (type == AdjustType.Vibrance) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
+
+      this.config.Vibrance = score;
+  }
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-    // console.log("configHistory: ", this.configHistory);
   }
 
   configHistotrypush() {
@@ -130,7 +156,6 @@ export class HonchoEditorClass implements HonchoEditor {
         Saturation: this.config.Saturation,
         Vibrance: this.config.Vibrance
       });
-      console.log("After length > 0: ",this.configHistory);
     }
   }
 
@@ -167,7 +192,7 @@ export class HonchoEditorClass implements HonchoEditor {
       this.listener?.onConfigChange(this.config);
 
     } else {
-      console.log("Cannot undo. At original state.");
+      console.error("Cannot undo. At original state.");
     }
   }
 
@@ -199,7 +224,7 @@ export class HonchoEditorClass implements HonchoEditor {
         this.listener?.onConfigChange(this.config);
       }
     } else {
-      console.log("Cannot redo. At latest state.");
+      console.error("Cannot redo. At latest state.");
     }
   }
 

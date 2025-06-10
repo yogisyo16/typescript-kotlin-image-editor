@@ -33,7 +33,10 @@ function hueShiftedProcess(imageToProcess: cv.Mat): cv.Mat {
     cv.merge(mergeChannels, hsvShifted);
 
     const bgrResult = new cv.Mat();
+
     cv.cvtColor(hsvShifted, bgrResult, cv.COLOR_HSV2BGR);
+    cv.cvtColor(bgrResult, bgrResult, cv.COLOR_BGR2BGRA);
+
     cleanUp.push(redMask, hShifted, hsvImage);
 
     return bgrResult;
@@ -54,6 +57,9 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
     if (!srcClone || srcClone.empty()) {
       throw new Error("Input image is empty");
     }
+
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
     const originalImage = new cv.Mat();
     cv.cvtColor(srcClone, originalImage, cv.COLOR_RGB2BGR);

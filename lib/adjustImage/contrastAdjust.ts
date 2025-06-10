@@ -1,4 +1,4 @@
-import cv from "@techstark/opencv-js";
+import cv, { cvtColor } from "@techstark/opencv-js";
 import { sigmoid } from "@/lib/adjustImage/sigmoidAdjust";
 
 function interpMatAllMat(x: cv.Mat, xp: cv.Mat, fp: cv.Mat): cv.Mat {
@@ -246,8 +246,10 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
   const cleanUp: cv.Mat[] = [];
 
   try {
-    const imageToProcess = src.clone();
-    cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
+    const srcClone = src.clone();
+    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+    cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
     const contrastFactor = score / 10;
 
     if (contrastFactor >= 0) {
@@ -256,7 +258,7 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       const midpoint = 0.5;
       const contrastScale = lowVal + (highVal - lowVal) / (1 + Math.exp(-0.3 * (contrastFactor - 1)));
 
-      const normalizeImg = imageToProcess.clone();
+      const normalizeImg = srcClone.clone();
       normalizeImg.convertTo(normalizeImg, cv.CV_32F);
       const scalar255 = new cv.Mat(normalizeImg.rows, normalizeImg.cols, cv.CV_32FC3, new cv.Scalar(255, 255, 255));
       cv.divide(normalizeImg, scalar255, normalizeImg);
@@ -266,10 +268,13 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       resultImg.convertTo(resultImg, cv.CV_8U);
       cleanUp.push(normalizeImg, scalar255);
 
+      // const image8Bit = resultImg.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+      resultImg.convertTo(resultImg, cv.CV_16SC3);
+      console.debug("Result Type: ", resultImg.type(), "Original Image type: ", src.type());
       return resultImg;
     } else {
       const labImg = new cv.Mat();
-      cv.cvtColor(imageToProcess, labImg, cv.COLOR_BGR2Lab);
+      cv.cvtColor(srcClone, labImg, cv.COLOR_BGR2Lab);
       labImg.convertTo(labImg, cv.CV_32F);
 
       const labChannels = new cv.MatVector();
@@ -284,12 +289,12 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       const gammaC = 127 * (1 - fScore);
       cleanUp.push(labChannels as any);
 
-      const floatMat = imageToProcess.clone();
+      const floatMat = srcClone.clone();
       floatMat.convertTo(floatMat, cv.CV_32F);
 
       const resultMat = new cv.Mat();
       cv.addWeighted(floatMat, alphaC, floatMat, 0.0, gammaC, resultMat);
-      resultMat.convertTo(resultMat, cv.CV_8U);
+      resultMat.convertTo(resultMat, cv.CV_8UC4);
       cleanUp.push(floatMat);
 
       const boostScore = 60 * Math.pow(Math.abs(contrastFactor) / 10.0, 1.5);
@@ -297,6 +302,12 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       const afterRedBoostAdj = await boostRedContrast(afterMidtonesAdj, lum, oriA);
       cleanUp.push(lum, oriA, resultMat, afterMidtonesAdj);
 
+      // cv.cvtColor(afterRedBoostAdj, afterRedBoostAdj, cv.COLOR_BGR2BGRA);
+      // afterRedBoostAdj.convertTo(afterRedBoostAdj, cv.CV_8S);
+      // const image16Bit2 = afterRedBoostAdj.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+      // afterRedBoostAdj.convertTo(afterRedBoostAdj, image16Bit2);
+
+      console.debug("Result Type: ", afterRedBoostAdj.type(), "Original Image type: ", src.type());
       return afterRedBoostAdj;
     }
   } catch (error) {

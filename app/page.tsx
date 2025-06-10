@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import Script from "next/script";
+import debounce from "@/lib/utills/debounce";
 import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
 import { AdjustType, Config, HonchoEditor, Listener } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
@@ -60,7 +61,7 @@ export default function Home() {
       if (canvasRef.current) cv.imshow(canvasRef.current, image);
     },
     onSyncConfigs: function (imageId: string, eventId: string, configs: Config[]): void {
-      throw new Error("Function not implemented.");
+      // throw new Error("Function not implemented.");
     },
     onConfigChange: function (config: Config): void {
       setAdjustments(config);
@@ -150,7 +151,7 @@ export default function Home() {
       setAdjustments((prev) => ({ ...prev, [key]: value }));
 
       if (editorRef.current) {
-        editorRef.current.adjust(key, value);
+        editorRef.current.adjust(key, value).catch(console.error);
       }
     },
     [editorRef]

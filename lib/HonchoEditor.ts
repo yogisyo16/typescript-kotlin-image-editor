@@ -1,4 +1,5 @@
 import cv from "@techstark/opencv-js";
+
 export interface Config {
   // Declaration for adjustments
   Exposure: number; // For ServerConfig Exposure
@@ -29,7 +30,7 @@ export interface HonchoEditor {
   // Image getter
   onImageUpdate(inputImage: cv.Mat): cv.Mat;
 
-  adjust(type: AdjustType, score: number): void;
+  adjust(type: AdjustType, score: number): Promise<void>;
   
   // Config History for undo and redo
   configHistotrypush(config: Config): void;
