@@ -1,25 +1,23 @@
 import cv from "@techstark/opencv-js";
 import { Adjustment } from "@/lib/HonchoEditor";
+import { convertTo16BitImage, convert8BitImage } from "@/lib/adjustExt/bitImageChecking";
 
 // This function is now correct and does not need to change.
 async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Adjustment[]): Promise<cv.Mat> {
     const imageToProcess16S = new cv.Mat();
-    const conversionType = originalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    originalImage.convertTo(imageToProcess16S, conversionType);
 
+    console.debug("Image Original: ", originalImage.type());
+    console.debug("Image type: ", imageToProcess16S.type());
     try {
         for (const adjustment of adjustmentPipeline) {
             if (adjustment.score !== 0) {
-                const deltaMat = await computeDelta(imageToProcess16S, adjustment.score, adjustment.func);
-                cv.add(imageToProcess16S, deltaMat, imageToProcess16S);
+                const deltaMat = await computeDelta(originalImage, adjustment.score, adjustment.func);
+                cv.add(originalImage, deltaMat, imageToProcess16S);
                 deltaMat.delete();
             }
         }
 
-        const finalImage = new cv.Mat();
-        const finalConversionType = originalImage.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
-        imageToProcess16S.convertTo(finalImage, finalConversionType); // Convert back to 8-bit (to make sure is converted)
-        imageToProcess16S.delete();
+        const finalImage = convert8BitImage(imageToProcess16S);
         return finalImage;
 
     } catch (err) {
@@ -40,9 +38,11 @@ async function computeDelta(
         const conversionType8U = image16S.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3; // converter 8 bit checker
         image16S.convertTo(image8U_before, conversionType8U);
         cleanup.push(image8U_before);
+        console.debug("Image Original on computeDelta: ", image16S.type());
+        console.debug("Image type on computeDelta: ", image8U_before.type());
 
         // Applying the adjustment
-        let image8U_after = await adjustmentFunction(image8U_before, score);
+        let image8U_after = await adjustmentFunction(image16S, score);
         cleanup.push(image8U_after);
 
         // Converter for image8U_after

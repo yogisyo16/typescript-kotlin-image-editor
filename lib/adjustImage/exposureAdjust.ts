@@ -60,13 +60,6 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     cv.merge(mergedHsv, finalHSV);
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
-    // if (src.channels() === 4 && finalHSV.channels() === 3) {
-    //     const tempResult = finalHSV;
-    //     cv.cvtColor(tempResult, finalHSV, cv.COLOR_BGR2BGRA, 0);
-    //     tempResult.delete();
-    // }
-    console.log("Original image Matix compute Delta: ", src.channels(), "Original Type: ", src.type());
-    console.log("Exposure matrix compute Delta: ", finalHSV.channels(), "Original Type: ", finalHSV.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);
