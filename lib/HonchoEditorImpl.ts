@@ -97,14 +97,12 @@ export class HonchoEditorClass implements HonchoEditor {
     if (this.config[key] === value) return;
     this.config[key] = value;
     const adjustmentPipeline = [
-      // Basic tonal adjustments
       { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
       { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
       { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
       { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
       { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
       { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-      // Color adjustments
       { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
       { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
       { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
