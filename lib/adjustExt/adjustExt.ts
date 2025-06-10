@@ -20,23 +20,29 @@ async function cleanAndExecuteAdjustment(
         const currentAdjustImage = await action(originalImage, currentValue);
 
         const currentAdjustImageBit16 = convertTo16BitImage(currentAdjustImage);
+        console.debug(currentAdjustImage.type());
+        console.debug(currentAdjustImageBit16.type());
 
         // TODO check this code if correct to remove alpha
-        const currentValueImage = minusCvMat(currentAdjustImageBit16, originalImage);
+        const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
 
         // let remove expousre value from currentImageEdit
         cleanUpCurrentDelta = minusCvMat(currentImageEdit, currentValueImage);
         // currentValueImage.delete();
     } else {
         // no need to clean up, just use current image edit, since the value is 0
+        console.debug("no need to clean up");
         cleanUpCurrentDelta = currentImageEdit;
     }
 
     // now imageEdit already 0 exposure and we add with new exposure value
-    const resultExposureImage = await action(originalImage, newValue);
-
+    const resultDefaultValue = await action(originalImage, newValue);
+    
+    const currentAdjustImageBit16 = convertTo16BitImage(resultDefaultValue);
+    console.debug(resultDefaultValue.type());
+    console.debug(currentAdjustImageBit16.type());
     // +10 exposure clean
-    const resultDeltaValue = minusCvMat(resultExposureImage, originalImage);
+    const resultDeltaValue = minusCvMat(currentAdjustImageBit16, originalImage);
     // resultExposureImage.delete();
     // save to currentImageEdit and publish to UI
     return plusCvMath(cleanUpCurrentDelta, resultDeltaValue);
