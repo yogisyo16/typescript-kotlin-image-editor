@@ -1,4 +1,5 @@
 import cv from "@techstark/opencv-js";
+import openCVAdjustments from "@/lib/openCVAdjustment";
 
 export interface Config {
   // Declaration for adjustments
@@ -21,8 +22,8 @@ export enum AdjustType {
 
 export interface Adjustment {
     score: number;
-    func: (image: cv.Mat, score: number) => Promise<cv.Mat>;
-    name: string;
+    func: any;
+    name: AdjustType;
 }
 
 export interface HonchoEditor {

@@ -265,11 +265,12 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
 
       const resultImg = await sigmoid(normalizeImg, contrastScale, midpoint, 0.9);
       cv.multiply(resultImg, scalar255, resultImg);
-      resultImg.convertTo(resultImg, cv.CV_8U);
+      resultImg.convertTo(resultImg, cv.CV_64F);
       cleanUp.push(normalizeImg, scalar255);
 
       // const image8Bit = resultImg.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-      resultImg.convertTo(resultImg, cv.CV_16SC3);
+      // cv.cvtColor(resultImg, resultImg, cv.COLOR_BGR2BGRA);
+      // resultImg.convertTo(resultImg, cv.CV_32SC4);
       console.debug("Result Type: ", resultImg.type(), "Original Image type: ", src.type());
       return resultImg;
     } else {
@@ -302,8 +303,9 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       const afterRedBoostAdj = await boostRedContrast(afterMidtonesAdj, lum, oriA);
       cleanUp.push(lum, oriA, resultMat, afterMidtonesAdj);
 
+      cv.cvtColor(afterRedBoostAdj, afterRedBoostAdj, cv.COLOR_Lab2BGR);
       // cv.cvtColor(afterRedBoostAdj, afterRedBoostAdj, cv.COLOR_BGR2BGRA);
-      // afterRedBoostAdj.convertTo(afterRedBoostAdj, cv.CV_8S);
+      afterRedBoostAdj.convertTo(afterRedBoostAdj, cv.CV_16SC4);
       // const image16Bit2 = afterRedBoostAdj.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
       // afterRedBoostAdj.convertTo(afterRedBoostAdj, image16Bit2);
 

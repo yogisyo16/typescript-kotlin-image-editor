@@ -278,9 +278,9 @@ async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
     cleanUp.push(lumScalingFactor);
     cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2BGRA);
     
-    const image16Bit = adjustedMat.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    adjustedMat.convertTo(adjustedMat, image16Bit);
-
+    // const image16Bit = adjustedMat.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    // adjustedMat.convertTo(adjustedMat, image16Bit);
+    console.debug("Result Type: ", adjustedMat.type(), "Original Image type: ", src.type());
     return adjustedMat;
   } catch(error) {
     console.log(error);

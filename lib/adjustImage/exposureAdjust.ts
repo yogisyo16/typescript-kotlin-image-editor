@@ -28,6 +28,7 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     } else {
         factor = Math.pow(2.0, score / 1.5);
     }
+    console.debug(score);
 
     const imageFloat = new cv.Mat();
     srcClone.convertTo(imageFloat, cv.CV_64FC3);
@@ -64,10 +65,10 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_BGR2BGRA);
-    const image16Bit = finalHSV.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    // const image16Bit = finalHSV.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
     const image8Bit = finalHSV.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
     finalHSV.convertTo(finalHSV, image8Bit);
-    console.debug("Result Type: ", finalHSV.type(), "Original Image type: ", src.type());
+    console.debug("Result Type after convert: ", finalHSV.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);
