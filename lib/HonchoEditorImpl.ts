@@ -49,7 +49,7 @@ export class HonchoEditorClass implements HonchoEditor {
   private inputImage: cv.Mat;
   private currentImageEdit: cv.Mat = new cv.Mat();
   private listener: Listener | null = null;
-  // Config variable Value
+  // Config variable score
   private config: Config = {
     Exposure: 0,
     Temperature: 0,
@@ -78,9 +78,9 @@ export class HonchoEditorClass implements HonchoEditor {
     return { ...this.config };
   }
 
-  // Setter for individual config values
-  public setConfigValue(key: keyof Config, value: number): void {
-    this.config = { ...this.config, [key]: value };
+  // Setter for individual config scores
+  public setConfigscore(key: keyof Config, score: number): void {
+    this.config = { ...this.config, [key]: score };
   }
 
   consume(serverConfig: Config[]): string {
@@ -92,21 +92,21 @@ export class HonchoEditorClass implements HonchoEditor {
     return inputImage.clone(); // Clone to avoid modifying the input
   }
 
-  async adjust(type: AdjustType, value: number): Promise<void> {
+  async adjust(type: AdjustType, score: number): Promise<void> {
     const key = AdjustType[type] as keyof Config;
-    if (this.config[key] === value) return;
-    this.config[key] = value;
+    if (this.config[key] === score) return;
+    this.config[key] = score;
     const adjustmentPipeline = [
-      { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
-      { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
-      { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
-      { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
-      { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
-      { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-      { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
-      { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
-      { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
-      { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+      { score: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+      { score: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+      { score: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+      { score: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+      { score: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+      { score: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+      { score: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+      { score: this.config.Tint, func: modifyImageTint, name: "Tint" },
+      { score: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+      { score: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
     ];
     const newImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
     this.currentImageEdit = newImage;
@@ -146,16 +146,16 @@ export class HonchoEditorClass implements HonchoEditor {
       this.config = { ...previousState }; // Update the internal config
 
       const adjustmentPipeline = [
-        { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
-        { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
-        { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
-        { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
-        { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
-        { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-        { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
-        { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
-        { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
-        { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+        { score: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+        { score: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+        { score: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+        { score: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+        { score: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+        { score: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+        { score: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+        { score: this.config.Tint, func: modifyImageTint, name: "Tint" },
+        { score: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+        { score: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
       ];
       
       const undoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
@@ -179,16 +179,16 @@ export class HonchoEditorClass implements HonchoEditor {
         this.config = { ...redoState };
 
         const adjustmentPipeline = [
-          { value: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
-          { value: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
-          { value: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
-          { value: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
-          { value: this.config.Whites, func: modifyImageWhites, name: "Whites" },
-          { value: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
-          { value: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
-          { value: this.config.Tint, func: modifyImageTint, name: "Tint" },
-          { value: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
-          { value: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
+          { score: this.config.Exposure, func: modifyImageExposure, name: "Exposure" },
+          { score: this.config.Contrast, func: modifyImageContrast, name: "Contrast" },
+          { score: this.config.Highlights, func: modifyImageHighlights, name: "Highlights" },
+          { score: this.config.Shadow, func: modifyImageShadows, name: "Shadows" },
+          { score: this.config.Whites, func: modifyImageWhites, name: "Whites" },
+          { score: this.config.Blacks, func: modifyImageBlacks, name: "Blacks" },
+          { score: this.config.Temperature, func: modifyImageTemperature, name: "Temperature" },
+          { score: this.config.Tint, func: modifyImageTint, name: "Tint" },
+          { score: this.config.Vibrance, func: modifyImageVibrance, name: "Vibrance" },
+          { score: this.config.Saturation, func: modifyImageSaturation, name: "Saturation" },
         ];
 
         const redoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);

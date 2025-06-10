@@ -1,6 +1,6 @@
 import cv from "@techstark/opencv-js";
 
-async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> {
+async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> {
   const cleanUp: cv.Mat[] = [];
 
   try {
@@ -19,11 +19,11 @@ async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> 
 
     let factor = 1.0;
     let beta = 0.0;
-    if (value > 0) {
-        beta = 15 * value;
-        factor = Math.pow(2.0, value / 2.2);
+    if (score > 0) {
+        beta = 15 * score;
+        factor = Math.pow(2.0, score / 2.2);
     } else {
-        factor = Math.pow(2.0, value / 1.5);
+        factor = Math.pow(2.0, score / 1.5);
     }
 
     const imageFloat = new cv.Mat();
@@ -34,7 +34,7 @@ async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> 
     cv.multiply(imageFloat, factorMat, imageFloat);
     cleanUp.push(factorMat);
 
-    // Create a Mat for max value (255) instead of Scalar
+    // Create a Mat for max score (255) instead of Scalar
     const maxMat = new cv.Mat(imageFloat.rows, imageFloat.cols, cv.CV_64FC3, new cv.Scalar(255, 255, 255));
     cv.min(imageFloat, maxMat, imageFloat);
     imageFloat.convertTo(originalMat, cv.CV_8UC3);
@@ -60,7 +60,13 @@ async function modifyImageExposure(src: cv.Mat, value: number): Promise<cv.Mat> 
     cv.merge(mergedHsv, finalHSV);
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
-    // console.log(finalHSV);
+    // if (src.channels() === 4 && finalHSV.channels() === 3) {
+    //     const tempResult = finalHSV;
+    //     cv.cvtColor(tempResult, finalHSV, cv.COLOR_BGR2BGRA, 0);
+    //     tempResult.delete();
+    // }
+    console.log("Original image Matix compute Delta: ", src.channels(), "Original Type: ", src.type());
+    console.log("Exposure matrix compute Delta: ", finalHSV.channels(), "Original Type: ", finalHSV.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);

@@ -19,8 +19,8 @@ export enum AdjustType {
 }
 
 export interface Adjustment {
-    value: number;
-    func: (image: cv.Mat, value: number) => Promise<cv.Mat>;
+    score: number;
+    func: (image: cv.Mat, score: number) => Promise<cv.Mat>;
     name: string;
 }
 
@@ -29,7 +29,7 @@ export interface HonchoEditor {
   // Image getter
   onImageUpdate(inputImage: cv.Mat): cv.Mat;
 
-  adjust(type: AdjustType, value: number): void;
+  adjust(type: AdjustType, score: number): void;
   
   // Config History for undo and redo
   configHistotrypush(config: Config): void;

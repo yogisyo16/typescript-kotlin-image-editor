@@ -242,13 +242,13 @@ async function boostRedContrast(originalMat: cv.Mat, lum: cv.Mat, oriA: cv.Mat):
 }
 
 // -- Implement adjustment Contrast
-async function modifyImageContrast(src: cv.Mat, contrastScore: number): Promise<cv.Mat> {
+async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> {
   const cleanUp: cv.Mat[] = [];
 
   try {
     const imageToProcess = src.clone();
     cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
-    const contrastFactor = contrastScore / 10;
+    const contrastFactor = score / 10;
 
     if (contrastFactor >= 0) {
       const lowVal = 4.0;

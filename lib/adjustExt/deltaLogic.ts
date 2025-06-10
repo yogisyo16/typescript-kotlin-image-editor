@@ -9,25 +9,17 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
 
     try {
         for (const adjustment of adjustmentPipeline) {
-            if (adjustment.value !== 0) {
-                // console.log("Applying delta for:", adjustment.name);
-                const deltaMat = await computeDelta(imageToProcess16S, adjustment.value, adjustment.func);
+            if (adjustment.score !== 0) {
+                const deltaMat = await computeDelta(imageToProcess16S, adjustment.score, adjustment.func);
                 cv.add(imageToProcess16S, deltaMat, imageToProcess16S);
                 deltaMat.delete();
             }
         }
 
-        // Checking the Original Image
-        console.log("Original image Matix: ", originalImage.channels(), "Original Type: ", originalImage.type());
-        console.log("Original image Matix: ", imageToProcess16S.channels(), "Original Type: ", imageToProcess16S.type());
-
         const finalImage = new cv.Mat();
         const finalConversionType = originalImage.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
         imageToProcess16S.convertTo(finalImage, finalConversionType); // Convert back to 8-bit (to make sure is converted)
         imageToProcess16S.delete();
-
-        // Checking the final image
-        console.log("Final image Matix: ", finalImage.channels(), "Final Type: ", finalImage.type());
         return finalImage;
 
     } catch (err) {
@@ -39,8 +31,8 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
 
 async function computeDelta(
     image16S: cv.Mat,
-    value: number,
-    adjustmentFunction: (image: cv.Mat, value: number) => Promise<cv.Mat>,
+    score: number,
+    adjustmentFunction: (image: cv.Mat, score: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
     const cleanup: cv.Mat[] = [];
     try {
@@ -50,11 +42,8 @@ async function computeDelta(
         cleanup.push(image8U_before);
 
         // Applying the adjustment
-        let image8U_after = await adjustmentFunction(image8U_before, value);
+        let image8U_after = await adjustmentFunction(image8U_before, score);
         cleanup.push(image8U_after);
-
-        console.log("Original image Matix compute Delta: ", image8U_before.channels(), "Original Type: ", image8U_before.type());
-        console.log("Original image Matix Compute Delta: ", image8U_after.channels(), "Original Type: ", image8U_after.type());
 
         // Converter for image8U_after
         // and in this where checking for channels for image8U_after
@@ -77,9 +66,6 @@ async function computeDelta(
         image8U_after.convertTo(image16S_after, conversionType16S);
         
         const deltaMat = new cv.Mat();
-
-        // damn it, it should be ez but it's not unfortunately
-        // THIS IS the delta logic for the image
         cv.subtract(image16S_after, image16S_before, deltaMat);
         
         return deltaMat;
