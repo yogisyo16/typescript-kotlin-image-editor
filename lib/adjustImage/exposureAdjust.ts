@@ -6,8 +6,8 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
   try {
     const srcClone = src.clone();
 
-    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
-    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
     // Ensure input is 3 channels (BGR) to avoid RGBA issues
     cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
@@ -66,8 +66,8 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_BGR2BGRA);
     // const image16Bit = finalHSV.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    const image8Bit = finalHSV.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
-    finalHSV.convertTo(finalHSV, image8Bit);
+    // const image8Bit = finalHSV.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
+    // finalHSV.convertTo(finalHSV, image8Bit);
     console.debug("Result Type after convert: ", finalHSV.type());
     return finalHSV; 
   } catch (error) {

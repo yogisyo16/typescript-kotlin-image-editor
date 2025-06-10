@@ -1,4 +1,5 @@
 import cv from "@techstark/opencv-js";
+import { convertTo16BitImage } from "@/lib/adjustExt/bitImageChecking";
 
 // cleanAndExecuteAdjustment to remove the alpha from currentImageEdit
 // and apply with new value apha
@@ -18,8 +19,10 @@ async function cleanAndExecuteAdjustment(
         // Get adjust value from original
         const currentAdjustImage = await action(originalImage, currentValue);
 
+        const currentAdjustImageBit16 = convertTo16BitImage(currentAdjustImage);
+
         // TODO check this code if correct to remove alpha
-        const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
+        const currentValueImage = minusCvMat(currentAdjustImageBit16, originalImage);
 
         // let remove expousre value from currentImageEdit
         cleanUpCurrentDelta = minusCvMat(currentImageEdit, currentValueImage);
