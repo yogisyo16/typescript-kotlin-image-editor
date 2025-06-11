@@ -95,6 +95,13 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   async adjust(type: AdjustType, score: number): Promise<void> {
+    const rows = this.inputImage.rows;
+    const cols = this.inputImage.cols;
+
+    console.log('-----------');
+    console.debug('Number of rows:', rows);
+    console.debug('Number of columns:', cols);
+    console.log('-----------');
     if (type == AdjustType.Exposure) {
       this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
       

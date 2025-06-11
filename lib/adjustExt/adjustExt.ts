@@ -19,9 +19,9 @@ async function cleanAndExecuteAdjustment(
         // Get adjust value from original
         const currentAdjustImage = await action(originalImage, currentValue);
 
-        const currentAdjustImageBit16 = convertTo16BitImage(currentAdjustImage);
-        console.debug(currentAdjustImage.type());
-        console.debug(currentAdjustImageBit16.type());
+        // const currentAdjustImageBit16 = convertTo16BitImage(currentAdjustImage);
+        // console.debug(currentAdjustImage.type());
+        // console.debug(currentAdjustImageBit16.type());
 
         // TODO check this code if correct to remove alpha
         const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
@@ -31,19 +31,19 @@ async function cleanAndExecuteAdjustment(
         // currentValueImage.delete();
     } else {
         // no need to clean up, just use current image edit, since the value is 0
-        console.debug("no need to clean up");
+        // console.debug("no need to clean up");
         cleanUpCurrentDelta = currentImageEdit;
     }
 
     // now imageEdit already 0 exposure and we add with new exposure value
     const resultDefaultValue = await action(originalImage, newValue);
     
-    const currentAdjustImageBit16 = convertTo16BitImage(resultDefaultValue);
-    console.debug(resultDefaultValue.type());
-    console.debug(currentAdjustImageBit16.type());
+    // const currentAdjustImageBit16 = convertTo16BitImage(resultDefaultValue);
+    // console.debug(resultDefaultValue.type());
+    // console.debug(currentAdjustImageBit16.type());
     // +10 exposure clean
-    const resultDeltaValue = minusCvMat(currentAdjustImageBit16, originalImage);
-    // resultExposureImage.delete();
+    const resultDeltaValue = minusCvMat(resultDefaultValue, originalImage);
+    // console.debug("Pixel Matrix: ", resultDeltaValue.pixels());
     // save to currentImageEdit and publish to UI
     return plusCvMath(cleanUpCurrentDelta, resultDeltaValue);
 }

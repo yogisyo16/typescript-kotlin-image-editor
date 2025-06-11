@@ -1,4 +1,4 @@
-import cv from "@techstark/opencv-js";
+import cv, { rows } from "@techstark/opencv-js";
 
 async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> {
   const cleanUp: cv.Mat[] = [];
@@ -63,12 +63,44 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     mergedHsv.push_back(vTemp);
     cv.merge(mergedHsv, finalHSV);
 
+    const testRow = 200;
+    const testCols = 310;
+    const testRow1 = 270;
+    const testCols1 = 430;
+    const testRow2 = 310;
+    const testCols2 = 450;
+
+    // Note: At this point, finalHSV is still in HSV color space.
+    // The channel values will be Hue, Saturation, and Value.
+    // console.log(`--- Debugging Pixel at (Row: ${testRow}, Col: ${testCols}) ---`);
+    // console.log(`finalHSV before conversion: rows=${finalHSV.rows}, cols=${finalHSV.cols}, channels=${finalHSV.channels()}, type=${finalHSV.type()}`);
+
+    // const hsvPixel = finalHSV.ucharPtr(testRow, testCols);
+    // const H = hsvPixel[0];
+    // const S = hsvPixel[1];
+    // const V = hsvPixel[2];
+
+    // console.log(`HSV Pixel Values: H=${H}, S=${S}, V=${V}`);
+
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
-    // cv.cvtColor(finalHSV, finalHSV, cv.COLOR_BGR2BGRA);
+    
+
+    console.log('Debug finalHSV after conversion to BGR:');
+    const finalPixel = finalHSV.ucharPtr(testRow, testCols);
+    const finalPixel1 = finalHSV.ucharPtr(testRow1, testCols1);
+    const finalPixel2 = finalHSV.ucharPtr(testRow2, testCols2);
+    const [B, G, R, A] = finalPixel;
+    const [B1, G1, R1, A1] = finalPixel1;
+    const [B2, G2, R2, A2] = finalPixel2;
+    console.log('Final BGRA Channels: ', finalHSV.channels());
+    console.log(`Final BGRA Pixel Values: B=${B}, G=${G}, R=${R}, A=${A}`);
+    console.log(`Final BGRA Pixel Values: B=${B1}, G=${G1}, R=${R1}, A=${A1}`);
+    console.log(`Final BGRA Pixel Values: B=${B2}, G=${G2}, R=${R2}, A=${A2}`);
+
+    cv.cvtColor(finalHSV, finalHSV, cv.COLOR_BGR2BGRA);
     // const image16Bit = finalHSV.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
     // const image8Bit = finalHSV.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
     // finalHSV.convertTo(finalHSV, image8Bit);
-    // console.debug("Result Type after convert: ", finalHSV.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);

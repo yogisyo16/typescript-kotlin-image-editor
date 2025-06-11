@@ -86,6 +86,14 @@ export default function Home() {
       img.onload = () => {
         if (isCvLoaded) {
           const mat = cv.imread(img);
+          const row = mat.rows;
+          const col = mat.cols;
+
+          console.log('---- Original Before Resize ----');
+          console.log('Rows: ', row);
+          console.log('Cols: ', col);
+          console.log('---- Original After Resize ----');
+
           const resizedMat = resizeMatToFit(mat, 500, 500);
           mat.delete(); // Clean up original high-res Mat// will comment this after doing unit test later on after this projects
           setOriginalMat(resizedMat);
