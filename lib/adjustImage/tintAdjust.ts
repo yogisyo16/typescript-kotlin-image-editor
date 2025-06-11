@@ -237,10 +237,10 @@ async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
     const labImage = new cv.Mat();
     const srcClone = src.clone();
 
-    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
-    srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
+    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
 
-    tint = tint / 10;
+    tint = tint/10;
     cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
     cv.cvtColor(srcClone, labImage, cv.COLOR_BGR2Lab);
 

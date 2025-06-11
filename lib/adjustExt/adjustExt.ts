@@ -10,64 +10,46 @@ async function cleanAndExecuteAdjustment(
     newValue: number,
     originalImage: cv.Mat,
     currentImageEdit: cv.Mat,
-    action: (image: cv.Mat, value: number) => Promise<cv.Mat>,
+    adjustmentFunction: (image: cv.Mat, value: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
     if (currentValue === newValue) {
         return currentImageEdit;
     }
 
+    // let imageDeltaProcessor = imageDeltaProcessor();
     let cleanUpCurrentDelta = new cv.Mat();
     
-    console.debug("newValue", newValue);
-    const originalImage16Bit = new cv.Mat();
-    const currentImage16Bit = new cv.Mat();
+    const originalMat = new cv.Mat();
+    const cureendEditMat = new cv.Mat();
 
-    originalImage.convertTo(originalImage16Bit, cv.CV_16SC3);
-    currentImageEdit.convertTo(currentImage16Bit, cv.CV_16SC3);
-    // before
-    logImage(currentImageEdit, "before 1 ");
-    // const testOri = ;
+    originalImage.convertTo(originalMat, cv.CV_16SC3);
+    currentImageEdit.convertTo(cureendEditMat, cv.CV_16SC3);
+
     if (currentValue != 0) {
-        // Get adjust value from original
+        console.debug("excute 1 ");
+        const currentValueMat = await computeDelta(originalImage, currentValue, adjustmentFunction);
+        console.debug("excute 2 ");
+        currentValueMat.convertTo(currentValueMat, cv.CV_16SC3);
+        console.debug("excute 3 ");
+        cleanUpCurrentDelta = new cv.Mat();
 
-        const deltaMat = await computeDelta(newOriginalImage, adjustment.score, adjustment.func);
-        // const currentAdjustImage = await action(originalImage, currentValue);
-
-        // logImage(currentAdjustImage, "currentAdjustImage 2 ");
-        // // TODO check this code if correct to remove alpha
-        // const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
-
-        // logImage(currentValueImage, "currentValueImage 3 ");
-
-        // // let remove expousre value from currentImageEdit
-        // cleanUpCurrentDelta = minusCvMat(currentImageEdit, currentValueImage);
-
-        // logImage(cleanUpCurrentDelta, "cleanUpCurrentDelta 4 ");
-        // // currentValueImage.delete();
+        cv.subtract(cureendEditMat, currentValueMat, cleanUpCurrentDelta);
+        console.debug("excute 4 ");
     } else {
-        // no need to clean up, just use current image edit, since the value is 0
-        // console.debug("no need to clean up");
-        cleanUpCurrentDelta = currentImageEdit;
-        logImage(cleanUpCurrentDelta, "cleanUpCurrentDelta 5 ");
+        cleanUpCurrentDelta = cureendEditMat;
+        console.debug("excute 5 ");
     }
-
-    // console.debug("current Edit: ", currentImageEdit);
-    // console.debug(cleanUpCurrentDelta.type());
-
-    // now imageEdit already 0 exposure and we add with new exposure value
-    const resultDefaultValue = await action(originalImage, newValue);
-
-    // +10 exposure clean
-    const resultDeltaValue = minusCvMat(resultDefaultValue, originalImage);
-    // console.debug("Pixel Matrix: ", resultDeltaValue.pixels());
-    // save to currentImageEdit and publish to UI
-    const plusDeltaValue = plusCvMath(cleanUpCurrentDelta, resultDeltaValue);
-    const finalResult = new cv.Mat();
-
-    plusDeltaValue.convertTo(finalResult, cv.CV_8UC3);
-
-    // logImage(finalResult, "after 6 ");
-    return finalResult;
+    const resultDeltaMat = await computeDelta(originalImage, newValue, adjustmentFunction);
+    const result16Bit = new cv.Mat();
+    resultDeltaMat.convertTo(result16Bit, cv.CV_16SC3);
+    console.debug("excute 6 ");
+    const finalMat = new cv.Mat();
+    cv.add(cleanUpCurrentDelta, result16Bit, finalMat);
+    console.debug("excute 7 ");
+    const finalMatConverted = new cv.Mat();
+    finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
+    console.debug("excute 8 ");
+    return finalMatConverted;
 }
 
 function minusCvMat(a: cv.Mat, b: cv.Mat): cv.Mat {

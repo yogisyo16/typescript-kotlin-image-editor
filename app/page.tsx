@@ -6,31 +6,51 @@ import { HonchoEditorClass } from "@/lib/HonchoEditorImpl";
 import { AdjustType, Config, HonchoEditor, Listener } from "@/lib/HonchoEditor";
 import cv from "@techstark/opencv-js";
 
-const resizeMatToFit = (mat: cv.Mat, targetWidth: number, targetHeight: number): cv.Mat => {
-  if (!mat || mat.empty()) {
-    console.error("Invalid or empty Mat");
-    return new cv.Mat();
-  }
-
-  const width = mat.cols;
-  const height = mat.rows;
+/**
+ * Resizes a cv.Mat object.
+ *
+ * @param {cv.Mat} image - The input image in cv.Mat format.
+ * @param {number} [maxSize] - The maximum size (width or height) for the output image.
+ * @returns {cv.Mat} The resized image.
+ */
+const resizeMat = (image: cv.Mat, maxSize?: number): cv.Mat => {
+  const { width, height } = image.size();
   const aspectRatio = width / height;
-  const targetAspectRatio = targetWidth / targetHeight;
 
-  let newWidth: number, newHeight: number;
-  if (aspectRatio > targetAspectRatio) {
-    newWidth = targetWidth;
-    newHeight = Math.round(targetWidth / aspectRatio);
+  let newWidth: number;
+  let newHeight: number;
+
+  if (maxSize !== undefined && maxSize !== null) {
+    // Limit maximum size while maintaining aspect ratio
+    if (width > height) {
+      newWidth = maxSize;
+      newHeight = Math.round(maxSize / aspectRatio);
+    } else {
+      newWidth = Math.round(maxSize * aspectRatio);
+      newHeight = maxSize;
+    }
+    console.log(`Resizing with maxSize: ${maxSize} -> New size: ${newWidth} x ${newHeight}`);
   } else {
-    newHeight = targetHeight;
-    newWidth = Math.round(targetHeight * aspectRatio);
+    // Dynamically scale down images larger than 1000px to a max of 800px
+    const targetSize = 800;
+    const scaleFactor = (width > 1000 || height > 1000) ? targetSize / Math.max(width, height) : 1.0;
+
+    newWidth = Math.round(width * scaleFactor);
+    newHeight = Math.round(height * scaleFactor);
+
+    console.log(`Resizing dynamically -> New size: ${newWidth} x ${newHeight} (Scale Factor: ${scaleFactor})`);
   }
 
-  const resizedMat = new cv.Mat();
-  const dsize = new cv.Size(newWidth, newHeight);
-  cv.resize(mat, resizedMat, dsize, 0, 0, cv.INTER_AREA);
-  return resizedMat;
+  const newSize = new cv.Size(newWidth, newHeight);
+  const resizedImage = new cv.Mat();
+  
+  // cv.INTER_AREA is generally recommended for shrinking images
+  cv.resize(image, resizedImage, newSize, 0, 0, cv.INTER_AREA);
+
+  return resizedImage;
 };
+
+
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -86,8 +106,8 @@ export default function Home() {
       img.onload = () => {
         if (isCvLoaded) {
           const mat = cv.imread(img);
-
-          const resizedMat = resizeMatToFit(mat, 500, 500);
+          console.log(mat.rows, mat.cols);
+          const resizedMat = resizeMat(mat, 800);
           mat.delete(); // Clean up original high-res Mat// will comment this after doing unit test later on after this projects
           setOriginalMat(resizedMat);
 

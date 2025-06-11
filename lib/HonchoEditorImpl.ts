@@ -1,15 +1,4 @@
 import { HonchoEditor, Config, Listener, AdjustType } from "@/lib/HonchoEditor";
-import applyAllAdjustments from "@/lib/adjustExt/deltaLogic"; 
-import modifyImageExposure from "@/lib/adjustImage/exposureAdjust";
-import modifyImageTemperature from "@/lib/adjustImage/temperatureAdjust";
-import modifyImageTint from "@/lib/adjustImage/tintAdjust";
-import modifyImageHighlights from "@/lib/adjustImage/highlightAdjust";
-import modifyImageShadows from "@/lib/adjustImage/shadowsAdjust";
-import modifyImageBlacks from "@/lib/adjustImage/blacksAdjust";
-import modifyImageWhites from "@/lib/adjustImage/whiteAdjust";
-import modifyImageContrast from "@/lib/adjustImage/contrastAdjust";
-import modifyImageSaturation from "@/lib/adjustImage/saturationAdjust";
-import modifyImageVibrance from "@/lib/adjustImage/vibranceAdjust";
 import openCVAdjustments from "@/lib/openCVAdjustment";
 import cleanAndExecuteAdjustment from "@/lib/adjustExt/adjustExt";
 import cv from "@techstark/opencv-js";
@@ -95,65 +84,60 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   async adjust(type: AdjustType, score: number): Promise<void> {
-    const adjustmentPipeline = [
-        { score: this.config.Exposure, func: openCVAdjustments.modifyImageExposure, name: AdjustType.Exposure },
-        { score: this.config.Contrast, func: openCVAdjustments.modifyImageContrast, name: AdjustType.Contrast },
-        { score: this.config.Highlights, func: openCVAdjustments.modifyImageHighlights, name: AdjustType.Highlights },
-        { score: this.config.Shadow, func: openCVAdjustments.modifyImageShadows, name: AdjustType.Shadow },
-        { score: this.config.Whites, func: openCVAdjustments.modifyImageWhites, name: AdjustType.Whites },
-        { score: this.config.Blacks, func: openCVAdjustments.modifyImageBlacks, name: AdjustType.Blacks },
-        { score: this.config.Temperature, func: openCVAdjustments.modifyImageTemperature, name: AdjustType.Temperature },
-        { score: this.config.Tint, func: openCVAdjustments.modifyImageTint, name: AdjustType.Tint },
-        { score: this.config.Vibrance, func: openCVAdjustments.modifyImageVibrance, name: AdjustType.Vibrance },
-        { score: this.config.Saturation, func: openCVAdjustments.modifyImageSaturation, name: AdjustType.Saturation },
-      ];
 
-
-    this.currentImageEdit = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
-    // if (type == AdjustType.Exposure) {
-    //   this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
+    // const start = performance.now();
+    const start = Date.now();
+    // console.log(start);
+    
+    if (type == AdjustType.Exposure) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
       
-    //   // Update score exposure publish to UI
-    //   this.config.Exposure = score;
-    // } else if (type == AdjustType.Temperature) {
-    //   this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
+      // Update score exposure publish to UI
+      this.config.Exposure = score;
+    } else if (type == AdjustType.Temperature) {
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
 
-    //     this.config.Temperature = score;
-    // } else if (type == AdjustType.Tint) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
+        this.config.Temperature = score;
+    } else if (type == AdjustType.Tint) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
 
-    //     this.config.Tint = score;
-    // } else if (type == AdjustType.Contrast) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
+        this.config.Tint = score;
+    } else if (type == AdjustType.Contrast) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
 
-    //     this.config.Contrast = score;
-    // } else if (type == AdjustType.Highlights) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
+        this.config.Contrast = score;
+    } else if (type == AdjustType.Highlights) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
 
-    //     this.config.Highlights = score;
-    // } else if (type == AdjustType.Shadow) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
+        this.config.Highlights = score;
+    } else if (type == AdjustType.Shadow) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
 
-    //     this.config.Shadow = score;
-    // } else if (type == AdjustType.Blacks) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
+        this.config.Shadow = score;
+    } else if (type == AdjustType.Blacks) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
 
-    //     this.config.Blacks = score;
-    // } else if (type == AdjustType.Whites) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
+        this.config.Blacks = score;
+    } else if (type == AdjustType.Whites) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
 
-    //     this.config.Whites = score;
-    // } else if (type == AdjustType.Saturation) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
+        this.config.Whites = score;
+    } else if (type == AdjustType.Saturation) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
 
-    //     this.config.Saturation = score;
-    // } else if (type == AdjustType.Vibrance) {
-    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
+        this.config.Saturation = score;
+    } else if (type == AdjustType.Vibrance) {
+        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
 
-    //     this.config.Vibrance = score;
-    // }
+        this.config.Vibrance = score;
+    }
+    
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+    // const end = performance.now();
+    const end = Date.now();
+    const time = end - start;
+    console.log(time.toFixed(3) + ' ms');
   }
 
   configHistotrypush() {
@@ -198,13 +182,13 @@ export class HonchoEditorClass implements HonchoEditor {
         { score: this.config.Saturation, func: openCVAdjustments.modifyImageSaturation, name: AdjustType.Saturation },
       ];
       
-      const undoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
+      // // const undoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
       
-      if (this.currentImageEdit) this.currentImageEdit.delete();
-      this.currentImageEdit = undoneImage;
+      // if (this.currentImageEdit) this.currentImageEdit.delete();
+      // this.currentImageEdit = undoneImage;
 
-      this.listener?.onImageRendered(this.currentImageEdit);
-      this.listener?.onConfigChange(this.config);
+      // this.listener?.onImageRendered(this.currentImageEdit);
+      // this.listener?.onConfigChange(this.config);
 
     } else {
       console.error("Cannot undo. At original state.");
@@ -231,12 +215,12 @@ export class HonchoEditorClass implements HonchoEditor {
           { score: this.config.Saturation, func: openCVAdjustments.modifyImageSaturation, name: AdjustType.Saturation },
         ];
 
-        const redoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
-        if (this.currentImageEdit) this.currentImageEdit.delete();
-        this.currentImageEdit = redoneImage;
+        // const redoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
+        // if (this.currentImageEdit) this.currentImageEdit.delete();
+        // this.currentImageEdit = redoneImage;
 
-        this.listener?.onImageRendered(this.currentImageEdit);
-        this.listener?.onConfigChange(this.config);
+        // this.listener?.onImageRendered(this.currentImageEdit);
+        // this.listener?.onConfigChange(this.config);
       }
     } else {
       console.error("Cannot redo. At latest state.");

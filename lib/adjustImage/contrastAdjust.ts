@@ -252,7 +252,7 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
     cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
     const contrastFactor = score / 10;
 
-    if (contrastFactor >= 0) {
+    if (contrastFactor > 0) {
       const lowVal = 4.0;
       const highVal = 9.0;
       const midpoint = 0.5;
