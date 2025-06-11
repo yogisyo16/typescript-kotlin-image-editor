@@ -180,8 +180,8 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
             cv.cvtColor(finalHsv, finalImage, cv.COLOR_HSV2BGR);
             cv.cvtColor(finalImage, finalImage, cv.COLOR_BGR2BGRA);
 
-            const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-            finalImage.convertTo(finalImage, image16Bit);
+            // const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+            // finalImage.convertTo(finalImage, image16Bit);
 
             return finalImage;
 
@@ -242,9 +242,12 @@ async function modifyImageWhites(src: cv.Mat, whitesValue: number): Promise<cv.M
             const finalImage = new cv.Mat();
             finalImageFloat.convertTo(finalImage, cv.CV_8UC4);
 
-            const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-            finalImage.convertTo(finalImage, image16Bit);
+            console.debug("finalImageFloat", finalImage.type());
+            // cv.cvtColor(finalImage, finalImage, cv.COLOR_Lab2BGR);
 
+            // cv.cvtColor(finalImage, finalImage, cv.COLOR_BGR2BGRA);
+
+            console.debug("finalImage", finalImage.type());
             return finalImage;
         }
     } catch (err) {

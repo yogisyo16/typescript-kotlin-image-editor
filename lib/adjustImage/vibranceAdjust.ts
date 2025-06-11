@@ -144,8 +144,8 @@ async function modifyImageVibrance(src: cv.Mat, vibrance: number): Promise<cv.Ma
       cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
       cleanUp.push(adjustedImage);
 
-      const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-      finalImage.convertTo(finalImage, image16Bit);
+      // const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+      // finalImage.convertTo(finalImage, image16Bit);
 
       return finalImage;
   } catch (error) {

@@ -448,8 +448,8 @@ async function modifyImageTemperature(
     cv.cvtColor(srcClone, srcClone, cv.COLOR_RGB2RGBA);
 
     const result = srcClone.clone();
-    const image16Bit = result.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    result.convertTo(result, image16Bit);
+    // const image16Bit = result.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    // result.convertTo(result, image16Bit);
     return result;
 
   } catch (error) {

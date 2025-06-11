@@ -105,6 +105,7 @@ async function modifyImageSaturation(src: cv.Mat, saturation: number): Promise<c
 
     const finalImage = new cv.Mat();
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
+    cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
     cleanUp.push(adjustedImage);
 
     return finalImage;

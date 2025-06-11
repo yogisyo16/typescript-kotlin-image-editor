@@ -58,9 +58,9 @@ async function modifyImageBlacks(src: cv.Mat, blacks: number): Promise<cv.Mat> {
 
     cv.cvtColor(adjustedImage, finalImage, cv.COLOR_BGR2RGB);
     cv.cvtColor(finalImage, finalImage, cv.COLOR_RGB2RGBA);
-    const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    finalImage.convertTo(finalImage, image16Bit);
-    
+    // const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    // finalImage.convertTo(finalImage, image16Bit);
+    // console.debug(finalImage.type());
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_blacks:", error);

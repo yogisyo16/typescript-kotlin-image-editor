@@ -7,7 +7,7 @@ function boostLowChannel(scaleRatio: number, originalMat: cv.Mat): cv.Mat {
   try {
     const adjustedImage = originalMat.clone();
     
-    adjustedImage.convertTo(adjustedImage, originalMat.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
+    // adjustedImage.convertTo(adjustedImage, originalMat.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
     
     const highlightFactor = scaleRatio;
 
@@ -96,9 +96,10 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
     
     cleanUp.push(adjustedImage);
 
-    const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    finalImage.convertTo(finalImage, image16Bit);
+    // const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+    // finalImage.convertTo(finalImage, image16Bit);
 
+    console.log(finalImage.type());
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_highlights:", error);
