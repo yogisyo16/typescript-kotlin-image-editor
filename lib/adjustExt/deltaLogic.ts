@@ -10,7 +10,8 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
         for (const adjustment of adjustmentPipeline) {
             if (adjustment.score !== 0) {
                 const deltaMat = await computeDelta(newOriginalImage, adjustment.score, adjustment.func);
-                plusDelta = await addTotalDelta(newOriginalImage, deltaMat);
+                cv.add(newOriginalImage, deltaMat, plusDelta);
+                // plusDelta = await addTotalDelta(newOriginalImage, deltaMat);
                 // deltaMat.delete();
             }
         }
@@ -30,10 +31,17 @@ async function computeDelta(
 ): Promise<cv.Mat> {
     const cleanup: cv.Mat[] = [];
     try {
-        const imageAdjusted = await adjustmentFunction(originalImage, value);
+        const newOriginalImage = convertTo16BitImage(originalImage);
+        const imageAdjusted = await adjustmentFunction(newOriginalImage, value);
+
+        console.debug("adjusted Type :", imageAdjusted.type());
+
+        const finalImage = convert8BitImage(imageAdjusted);
+
+        const newOriginalImage8Bit = convert8BitImage(originalImage);
 
         const deltaMat = new cv.Mat();
-        cv.subtract(imageAdjusted, originalImage, deltaMat);
+        cv.subtract(finalImage, newOriginalImage8Bit, deltaMat);
         
         return deltaMat;
     } catch (err) {

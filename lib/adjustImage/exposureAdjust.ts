@@ -2,7 +2,7 @@ import cv from "@techstark/opencv-js";
 
 async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> {
   const cleanUp: cv.Mat[] = [];
-
+  console.debug("exposure image: ", src.type());
   try {
     const originalMat = src.clone();
 
@@ -60,6 +60,7 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     cv.merge(mergedHsv, finalHSV);
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
+    console.debug("adjusted Type :", finalHSV.type());
     return finalHSV; 
   } catch (error) {
     console.error("Error modifying image exposure:", error);
