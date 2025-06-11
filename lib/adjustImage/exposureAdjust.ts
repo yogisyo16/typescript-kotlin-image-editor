@@ -85,17 +85,17 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_HSV2BGR);
     
 
-    console.log('Debug finalHSV after conversion to BGR:');
-    const finalPixel = finalHSV.ucharPtr(testRow, testCols);
-    const finalPixel1 = finalHSV.ucharPtr(testRow1, testCols1);
-    const finalPixel2 = finalHSV.ucharPtr(testRow2, testCols2);
-    const [B, G, R, A] = finalPixel;
-    const [B1, G1, R1, A1] = finalPixel1;
-    const [B2, G2, R2, A2] = finalPixel2;
-    console.log('Final BGRA Channels: ', finalHSV.channels());
-    console.log(`Final BGRA Pixel Values: B=${B}, G=${G}, R=${R}, A=${A}`);
-    console.log(`Final BGRA Pixel Values: B=${B1}, G=${G1}, R=${R1}, A=${A1}`);
-    console.log(`Final BGRA Pixel Values: B=${B2}, G=${G2}, R=${R2}, A=${A2}`);
+    // console.log('Debug finalHSV after conversion to BGR:');
+    // const finalPixel = finalHSV.ucharPtr(testRow, testCols);
+    // const finalPixel1 = finalHSV.ucharPtr(testRow1, testCols1);
+    // const finalPixel2 = finalHSV.ucharPtr(testRow2, testCols2);
+    // const [B, G, R, A] = finalPixel;
+    // const [B1, G1, R1, A1] = finalPixel1;
+    // const [B2, G2, R2, A2] = finalPixel2;
+    // console.log('Final BGRA Channels: ', finalHSV.channels());
+    // console.log(`Final BGRA Pixel Values: B=${B}, G=${G}, R=${R}, A=${A}`);
+    // console.log(`Final BGRA Pixel Values: B=${B1}, G=${G1}, R=${R1}, A=${A1}`);
+    // console.log(`Final BGRA Pixel Values: B=${B2}, G=${G2}, R=${R2}, A=${A2}`);
 
     cv.cvtColor(finalHSV, finalHSV, cv.COLOR_BGR2BGRA);
     // const image16Bit = finalHSV.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;

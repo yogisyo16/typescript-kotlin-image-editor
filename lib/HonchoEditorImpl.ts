@@ -95,48 +95,63 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   async adjust(type: AdjustType, score: number): Promise<void> {
-    if (type == AdjustType.Exposure) {
-      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
+    const adjustmentPipeline = [
+        { score: this.config.Exposure, func: openCVAdjustments.modifyImageExposure, name: AdjustType.Exposure },
+        { score: this.config.Contrast, func: openCVAdjustments.modifyImageContrast, name: AdjustType.Contrast },
+        { score: this.config.Highlights, func: openCVAdjustments.modifyImageHighlights, name: AdjustType.Highlights },
+        { score: this.config.Shadow, func: openCVAdjustments.modifyImageShadows, name: AdjustType.Shadow },
+        { score: this.config.Whites, func: openCVAdjustments.modifyImageWhites, name: AdjustType.Whites },
+        { score: this.config.Blacks, func: openCVAdjustments.modifyImageBlacks, name: AdjustType.Blacks },
+        { score: this.config.Temperature, func: openCVAdjustments.modifyImageTemperature, name: AdjustType.Temperature },
+        { score: this.config.Tint, func: openCVAdjustments.modifyImageTint, name: AdjustType.Tint },
+        { score: this.config.Vibrance, func: openCVAdjustments.modifyImageVibrance, name: AdjustType.Vibrance },
+        { score: this.config.Saturation, func: openCVAdjustments.modifyImageSaturation, name: AdjustType.Saturation },
+      ];
+
+
+    this.currentImageEdit = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
+    // if (type == AdjustType.Exposure) {
+    //   this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
       
-      // Update score exposure publish to UI
-      this.config.Exposure = score;
-    } else if (type == AdjustType.Temperature) {
-      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
+    //   // Update score exposure publish to UI
+    //   this.config.Exposure = score;
+    // } else if (type == AdjustType.Temperature) {
+    //   this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
 
-        this.config.Temperature = score;
-    } else if (type == AdjustType.Tint) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
+    //     this.config.Temperature = score;
+    // } else if (type == AdjustType.Tint) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
 
-        this.config.Tint = score;
-    } else if (type == AdjustType.Contrast) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
+    //     this.config.Tint = score;
+    // } else if (type == AdjustType.Contrast) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
 
-        this.config.Contrast = score;
-    } else if (type == AdjustType.Highlights) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
+    //     this.config.Contrast = score;
+    // } else if (type == AdjustType.Highlights) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
 
-        this.config.Highlights = score;
-    } else if (type == AdjustType.Shadow) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
+    //     this.config.Highlights = score;
+    // } else if (type == AdjustType.Shadow) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
 
-        this.config.Shadow = score;
-    } else if (type == AdjustType.Blacks) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
+    //     this.config.Shadow = score;
+    // } else if (type == AdjustType.Blacks) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
 
-        this.config.Blacks = score;
-    } else if (type == AdjustType.Whites) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
+    //     this.config.Blacks = score;
+    // } else if (type == AdjustType.Whites) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
 
-        this.config.Whites = score;
-    } else if (type == AdjustType.Saturation) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
+    //     this.config.Whites = score;
+    // } else if (type == AdjustType.Saturation) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
 
-        this.config.Saturation = score;
-    } else if (type == AdjustType.Vibrance) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
+    //     this.config.Saturation = score;
+    // } else if (type == AdjustType.Vibrance) {
+    //     this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
 
-        this.config.Vibrance = score;
-    }
+    //     this.config.Vibrance = score;
+    // }
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
   }
