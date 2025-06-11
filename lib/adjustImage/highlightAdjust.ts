@@ -99,7 +99,7 @@ async function modifyImageHighlights(src: cv.Mat, highlight: number): Promise<cv
     // const image16Bit = finalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
     // finalImage.convertTo(finalImage, image16Bit);
 
-    console.log(finalImage.type());
+    // console.log(finalImage.type());
     return finalImage;
   } catch (error) {
     console.error("Error in modify_image_highlights:", error);

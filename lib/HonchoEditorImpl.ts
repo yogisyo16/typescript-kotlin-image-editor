@@ -85,48 +85,59 @@ export class HonchoEditorClass implements HonchoEditor {
 
   async adjust(type: AdjustType, score: number): Promise<void> {
 
-    // const start = performance.now();
-    const start = Date.now();
+    const start = performance.now();
+    
+    // const start = Date.now();
     // console.log(start);
     
     if (type == AdjustType.Exposure) {
+        console.log("Adjustmen Type: Exposure");
       this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
       
       // Update score exposure publish to UI
       this.config.Exposure = score;
     } else if (type == AdjustType.Temperature) {
+        console.log("Adjustmen Type: Temperature");
       this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
 
         this.config.Temperature = score;
     } else if (type == AdjustType.Tint) {
+        console.log("Adjustmen Type: Tint");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
 
         this.config.Tint = score;
     } else if (type == AdjustType.Contrast) {
+        console.log("Adjustmen Type: Contrast");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
 
         this.config.Contrast = score;
     } else if (type == AdjustType.Highlights) {
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
+      console.log("Adjustmen Type: Highlights");  
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
 
         this.config.Highlights = score;
     } else if (type == AdjustType.Shadow) {
+        console.log("Adjustmen Type: Shadow");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
 
         this.config.Shadow = score;
     } else if (type == AdjustType.Blacks) {
+        console.log("Adjustmen Type: Blacks");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
 
         this.config.Blacks = score;
     } else if (type == AdjustType.Whites) {
+        console.log("Adjustmen Type: Whites");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
 
         this.config.Whites = score;
     } else if (type == AdjustType.Saturation) {
+        console.log("Adjustmen Type: Saturation");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
 
         this.config.Saturation = score;
     } else if (type == AdjustType.Vibrance) {
+        console.log("Adjustmen Type: Vibrance");
         this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
 
         this.config.Vibrance = score;
@@ -134,10 +145,11 @@ export class HonchoEditorClass implements HonchoEditor {
     
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-    // const end = performance.now();
-    const end = Date.now();
-    const time = end - start;
-    console.log(time.toFixed(3) + ' ms');
+    const end = performance.now();
+    // const end = Date.now();
+    const timeInMillis = end - start;
+    const timeSecond = timeInMillis / 1000;
+    console.log(`Execution time: ${timeSecond.toFixed(3)} s`);
   }
 
   configHistotrypush() {
