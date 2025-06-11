@@ -1,174 +1,175 @@
 import cv from "@techstark/opencv-js";
 
+/**
+ * Adjusts the black/shadow levels of an image using a YUV/LUT-based algorithm.
+ * This version is corrected to only use Mat objects in arithmetic functions.
+ *
+ * @param {cv.Mat} src - The input image in RGBA format.
+ * @param {number} score - The adjustment value. Positive values lift shadows; negative values crush them.
+ * @returns {Promise<cv.Mat>} A new Mat object with the adjustment applied.
+ */
 async function modifyImageBlacks(src: cv.Mat, score: number): Promise<cv.Mat> {
-  // If score is 0, return a clone of the original image without modification.
   const srcClone = src.clone();
+  if (!srcClone || !srcClone.data) {
+    throw new Error("Input image is empty or invalid");
+  }
 
-  // CRITICAL: Array to track all created Mats for cleanup to prevent memory leaks.
-  const mats: cv.Mat[] = [];
+  if (score === 0.0) {
+    return srcClone;
+  }
+
+  const matsToClean: cv.Mat[] = [srcClone];
 
   try {
     const originalMat = new cv.Mat();
-    mats.push(originalMat);
+    matsToClean.push(originalMat);
     cv.cvtColor(srcClone, originalMat, cv.COLOR_RGBA2BGR);
 
     const { height, width } = originalMat.size();
 
-    const floatTypeImage = originalMat.clone();
-    mats.push(floatTypeImage);
-    floatTypeImage.convertTo(floatTypeImage, cv.CV_32F);
+    const floatTypeImage = new cv.Mat();
+    matsToClean.push(floatTypeImage);
+    originalMat.convertTo(floatTypeImage, cv.CV_32F);
 
+    // --- BGR to YUV Manual Conversion ---
     const bgrChannels = new cv.MatVector();
+    // matsToClean.push(bgrChannels);
     cv.split(floatTypeImage, bgrChannels);
 
     const imgB = bgrChannels.get(0);
     const imgG = bgrChannels.get(1);
     const imgR = bgrChannels.get(2);
-    mats.push(imgB, imgG, imgR);
-    // bgrChannels.delete();
 
     const imgY = new cv.Mat(height, width, cv.CV_32F);
     const imgU = new cv.Mat(height, width, cv.CV_32F);
     const imgV = new cv.Mat(height, width, cv.CV_32F);
-    mats.push(imgY, imgU, imgV);
+    matsToClean.push(imgY, imgU, imgV);
 
-    cv.addWeighted(imgR, 0.3, imgG, 0.59, 0.0, imgY);
-    cv.addWeighted(imgY, 1.0, imgB, 0.11, 0.0, imgY);
+    cv.addWeighted(imgR, 0.299, imgG, 0.587, 0.0, imgY);
+    cv.addWeighted(imgY, 1.0, imgB, 0.114, 0.0, imgY);
     cv.addWeighted(imgR, -0.168736, imgG, -0.331264, 0.0, imgU);
     cv.addWeighted(imgU, 1.0, imgB, 0.5, 0.0, imgU);
     cv.addWeighted(imgR, 0.5, imgG, -0.418688, 0.0, imgV);
     cv.addWeighted(imgV, 1.0, imgB, -0.081312, 0.0, imgV);
 
-    const shadowTonePercent = 0.8;
+    // --- Shadow Adjustment Logic ---
     const shadowAmountPercent = score / 57.0;
-    const shadowRadius = 10;
-    const shadowTone = shadowTonePercent * 255.0;
     const shadowGain = 1.0 + shadowAmountPercent * 3.0;
 
     const shadowMap = new cv.Mat();
-    const tempMat = new cv.Mat(imgY.size(), cv.CV_32F, new cv.Scalar(255.0));
-    mats.push(shadowMap, tempMat);
-
-    // Using your preferred pattern for scalar multiplication
-    const scalarMat1 = cv.Mat.ones(imgY.size(), imgY.type());
-    scalarMat1.setTo(new cv.Scalar(255.0 / shadowTone));
-    mats.push(scalarMat1);
-
-    cv.multiply(imgY, scalarMat1, shadowMap);
-    cv.subtract(tempMat, shadowMap, shadowMap);
-
-    const mask = new cv.Mat();
-    const invertedMask = new cv.Mat();
-    mats.push(mask, invertedMask);
-
-    cv.threshold(imgY, mask, shadowTone - 1, 1.0, cv.THRESH_BINARY);
-    const onesMat = cv.Mat.ones(imgY.size(), cv.CV_32F);
-    mats.push(onesMat);
-    cv.subtract(onesMat, mask, invertedMask);
-
-    cv.multiply(shadowMap, invertedMask, shadowMap);
-
-    // Gaussian blur can be re-enabled if needed.
-    // if (shadowAmountPercent * shadowRadius > 0) {
-    //   const ksize = new cv.Size(shadowRadius, shadowRadius);
-    //   cv.blur(shadowMap, shadowMap, ksize);
-    // }
+    matsToClean.push(shadowMap);
+    cv.pow(imgY, 2.2, shadowMap);
+    cv.normalize(shadowMap, shadowMap, 255.0, 0.0, cv.NORM_MINMAX);
     
+    // CORRECTED: Create a Mat for the scalar value 255
+    const mat255 = cv.Mat.ones(shadowMap.size(), shadowMap.type());
+    mat255.setTo(new cv.Scalar(255.0));
+    matsToClean.push(mat255);
+    cv.subtract(mat255, shadowMap, shadowMap);
+
+
+    // --- Create and Apply Look-Up Table (LUT) ---
     const tData = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
-      tData[i] = (1 - Math.pow(1 - (i / 255.0), shadowGain)) * 255.0;
+        tData[i] = (1 - Math.pow(1 - (i / 255.0), shadowGain)) * 255.0;
     }
     const t = cv.matFromArray(256, 1, cv.CV_32F, tData);
-    const LUTShadow = new cv.Mat();
-    mats.push(t, LUTShadow);
+    const lut = new cv.Mat();
+    matsToClean.push(t, lut);
+    t.convertTo(lut, cv.CV_8U);
 
-    cv.min(t, new cv.Scalar(255.0), t);
-    cv.max(t, new cv.Scalar(0.0), t);
-    t.convertTo(LUTShadow, cv.CV_8U);
+    const lookupResult = new cv.Mat();
+    const imgY8U = new cv.Mat();
+    matsToClean.push(lookupResult, imgY8U);
+    imgY.convertTo(imgY8U, cv.CV_8U);
+    cv.LUT(imgY8U, lut, lookupResult);
 
-    let finalY = imgY.clone();
-    mats.push(finalY);
+    const finalY = new cv.Mat();
+    const shadowMapNormalized = new cv.Mat();
+    const lookupResult32F = new cv.Mat();
+    matsToClean.push(finalY, shadowMapNormalized, lookupResult32F);
 
-    if (shadowAmountPercent !== 0.0) {
-      const scalarMat3 = cv.Mat.ones(shadowMap.size(), shadowMap.type());
-      scalarMat3.setTo(new cv.Scalar(1.0 / 255.0));
-      mats.push(scalarMat3);
-      cv.multiply(shadowMap, scalarMat3, shadowMap);
+    shadowMap.convertTo(shadowMapNormalized, cv.CV_32F, 1.0 / 255.0);
+    lookupResult.convertTo(lookupResult32F, cv.CV_32F);
 
-      const lookup = new cv.Mat();
-      const tempY = finalY.clone();
-      mats.push(lookup, tempY);
-      
-      tempY.convertTo(tempY, cv.CV_8U);
-      cv.LUT(tempY, LUTShadow, lookup);
+    // CORRECTED: Create a Mat for the scalar value 1.0
+    const oneMinusMap = new cv.Mat();
+    const mat1 = cv.Mat.ones(shadowMapNormalized.size(), shadowMapNormalized.type());
+    mat1.setTo(new cv.Scalar(1.0));
+    matsToClean.push(oneMinusMap, mat1);
+    cv.subtract(mat1, shadowMapNormalized, oneMinusMap);
 
-      const tempShadow = cv.Mat.ones(shadowMap.size(), cv.CV_32F);
-      mats.push(tempShadow);
-      cv.subtract(tempShadow, shadowMap, tempShadow);
+    const term1 = new cv.Mat();
+    const term2 = new cv.Mat();
+    matsToClean.push(term1, term2);
+    cv.multiply(imgY, oneMinusMap, term1);
+    cv.multiply(lookupResult32F, shadowMapNormalized, term2);
+    cv.add(term1, term2, finalY);
 
-      cv.multiply(finalY, tempShadow, finalY);
-      lookup.convertTo(lookup, cv.CV_32F);
-      cv.multiply(lookup, shadowMap, lookup);
-      cv.add(finalY, lookup, finalY);
-    }
 
+    // --- YUV to BGR Manual Conversion ---
     const outputR = new cv.Mat();
     const outputG = new cv.Mat();
     const outputB = new cv.Mat();
     const temp1 = new cv.Mat();
     const temp2 = new cv.Mat();
-    mats.push(outputR, outputG, outputB, temp1, temp2);
+    matsToClean.push(outputR, outputG, outputB, temp1, temp2);
 
-    const vForRedMat = cv.Mat.ones(imgV.size(), imgV.type());
-    vForRedMat.setTo(new cv.Scalar(1.402));
-    const uForGreenMat = cv.Mat.ones(imgU.size(), imgU.type());
-    uForGreenMat.setTo(new cv.Scalar(0.34414));
-    const vForGreenMat = cv.Mat.ones(imgV.size(), imgV.type());
-    vForGreenMat.setTo(new cv.Scalar(0.71414));
-    const uForBlueMat = cv.Mat.ones(imgU.size(), imgU.type());
-    uForBlueMat.setTo(new cv.Scalar(1.772));
-    mats.push(vForRedMat, uForGreenMat, vForGreenMat, uForBlueMat);
+    // CORRECTED: Create Mats for all scalar multipliers
+    const vRedScalar = cv.Mat.ones(imgV.size(), imgV.type());
+    vRedScalar.setTo(new cv.Scalar(1.402));
+    const uGreenScalar = cv.Mat.ones(imgU.size(), imgU.type());
+    uGreenScalar.setTo(new cv.Scalar(0.344136));
+    const vGreenScalar = cv.Mat.ones(imgV.size(), imgV.type());
+    vGreenScalar.setTo(new cv.Scalar(0.714136));
+    const uBlueScalar = cv.Mat.ones(imgU.size(), imgU.type());
+    uBlueScalar.setTo(new cv.Scalar(1.772));
+    matsToClean.push(vRedScalar, uGreenScalar, vGreenScalar, uBlueScalar);
 
-    cv.multiply(imgV, vForRedMat, temp1);
+    // R = Y + 1.402 * V
+    cv.multiply(imgV, vRedScalar, temp1);
     cv.add(finalY, temp1, outputR);
-    
-    cv.multiply(imgU, uForGreenMat, temp1);
-    cv.multiply(imgV, vForGreenMat, temp2);
+
+    // G = Y - 0.344136 * U - 0.714136 * V
+    cv.multiply(imgU, uGreenScalar, temp1);
+    cv.multiply(imgV, vGreenScalar, temp2);
     cv.subtract(finalY, temp1, outputG);
     cv.subtract(outputG, temp2, outputG);
 
-    cv.multiply(imgU, uForBlueMat, temp1);
+    // B = Y + 1.772 * U
+    cv.multiply(imgU, uBlueScalar, temp1);
     cv.add(finalY, temp1, outputB);
 
+    // --- Final Assembly ---
     const outputChannels = new cv.MatVector();
-    
+    // matsToClean.push(outputChannels);
+
     outputB.convertTo(outputB, cv.CV_8U);
     outputG.convertTo(outputG, cv.CV_8U);
     outputR.convertTo(outputR, cv.CV_8U);
-    
+
     outputChannels.push_back(outputB);
     outputChannels.push_back(outputG);
     outputChannels.push_back(outputR);
-    
+
     const outputMat = new cv.Mat();
+    matsToClean.push(outputMat);
     cv.merge(outputChannels, outputMat);
-    // outputChannels.delete();
-    
+
     const resultMat = new cv.Mat();
     cv.cvtColor(outputMat, resultMat, cv.COLOR_BGR2RGBA);
-    // outputMat.delete();
-    
-    console.debug("test out");
-    return resultMat;
 
+    return resultMat;
+  } catch (error) {
+    console.error("Error in modifyImageBlacks:", error);
+    return src.clone();
   } finally {
-    // Crucial: Clean up all intermediate Mat objects to prevent memory leaks.
-    mats.forEach(mat => {
+    matsToClean.forEach((mat) => {
       if (mat && !mat.isDeleted()) {
         mat.delete();
       }
     });
   }
-};
+}
 
 export default modifyImageBlacks;
