@@ -1,4 +1,4 @@
-import cv, { cvtColor } from "@techstark/opencv-js";
+import cv from "@techstark/opencv-js";
 import { sigmoid } from "@/lib/adjustImage/sigmoidAdjust";
 
 function interpMatAllMat(x: cv.Mat, xp: cv.Mat, fp: cv.Mat): cv.Mat {
@@ -246,56 +246,51 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
   const cleanUp: cv.Mat[] = [];
 
   try {
-    const srcClone = src.clone();
-    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3);
-    // srcClone.convertTo(srcClone, src.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3);
-    cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
+    const imageToProcess = src.clone();
+    cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
     const contrastFactor = score / 10;
 
-    if (contrastFactor > 0) {
+    if (contrastFactor >= 0) {
       const lowVal = 4.0;
       const highVal = 9.0;
       const midpoint = 0.5;
       const contrastScale = lowVal + (highVal - lowVal) / (1 + Math.exp(-0.3 * (contrastFactor - 1)));
 
-      const normalizeImg = srcClone.clone();
+      const normalizeImg = imageToProcess.clone();
       normalizeImg.convertTo(normalizeImg, cv.CV_32F);
       const scalar255 = new cv.Mat(normalizeImg.rows, normalizeImg.cols, cv.CV_32FC3, new cv.Scalar(255, 255, 255));
       cv.divide(normalizeImg, scalar255, normalizeImg);
 
       const resultImg = await sigmoid(normalizeImg, contrastScale, midpoint, 0.9);
       cv.multiply(resultImg, scalar255, resultImg);
-      resultImg.convertTo(resultImg, cv.CV_64F);
+      resultImg.convertTo(resultImg, cv.CV_8U);
       cleanUp.push(normalizeImg, scalar255);
+      cv.cvtColor(resultImg, resultImg, cv.COLOR_BGR2BGRA);
 
-      const image8Bit = resultImg.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-      cv.cvtColor(image8Bit, resultImg, cv.COLOR_BGR2BGRA);
-      // resultImg.convertTo(resultImg, cv.CV_32SC4);
-      console.debug("Result Type: ", resultImg.type(), "Original Image type: ", src.type());
       return resultImg;
     } else {
       const labImg = new cv.Mat();
-      cv.cvtColor(srcClone, labImg, cv.COLOR_BGR2Lab);
+      cv.cvtColor(imageToProcess, labImg, cv.COLOR_BGR2Lab);
       labImg.convertTo(labImg, cv.CV_32F);
 
       const labChannels = new cv.MatVector();
       cv.split(labImg, labChannels);
       cleanUp.push(labImg);
 
-      const adjustedContrastScore = contrastFactor / 100;
+      const adjustedScore = contrastFactor / 100;
       const lum = labChannels.get(0).clone();
       const oriA = labChannels.get(1).clone();
-      const fScore = 131.0 * (adjustedContrastScore + 127) / (127 * (131 - adjustedContrastScore));
+      const fScore = 131.0 * (adjustedScore + 127) / (127 * (131 - adjustedScore));
       const alphaC = fScore;
       const gammaC = 127 * (1 - fScore);
       cleanUp.push(labChannels as any);
 
-      const floatMat = srcClone.clone();
+      const floatMat = imageToProcess.clone();
       floatMat.convertTo(floatMat, cv.CV_32F);
 
       const resultMat = new cv.Mat();
       cv.addWeighted(floatMat, alphaC, floatMat, 0.0, gammaC, resultMat);
-      resultMat.convertTo(resultMat, cv.CV_8UC4);
+      resultMat.convertTo(resultMat, cv.CV_8U);
       cleanUp.push(floatMat);
 
       const boostScore = 60 * Math.pow(Math.abs(contrastFactor) / 10.0, 1.5);
@@ -303,13 +298,8 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       const afterRedBoostAdj = await boostRedContrast(afterMidtonesAdj, lum, oriA);
       cleanUp.push(lum, oriA, resultMat, afterMidtonesAdj);
 
-      cv.cvtColor(afterRedBoostAdj, afterRedBoostAdj, cv.COLOR_Lab2BGR);
       cv.cvtColor(afterRedBoostAdj, afterRedBoostAdj, cv.COLOR_BGR2BGRA);
-      // afterRedBoostAdj.convertTo(afterRedBoostAdj, cv.CV_16SC4);
-      // const image16Bit2 = afterRedBoostAdj.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-      // afterRedBoostAdj.convertTo(afterRedBoostAdj, image16Bit2);
 
-      console.debug("Result Type: ", afterRedBoostAdj.type(), "Original Image type: ", src.type());
       return afterRedBoostAdj;
     }
   } catch (error) {
