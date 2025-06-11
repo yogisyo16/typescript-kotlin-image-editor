@@ -29,7 +29,7 @@ const resizeMat = (image: cv.Mat, maxSize?: number): cv.Mat => {
       newWidth = Math.round(maxSize * aspectRatio);
       newHeight = maxSize;
     }
-    console.log(`Resizing with maxSize: ${maxSize} -> New size: ${newWidth} x ${newHeight}`);
+    // console.log(`Resizing with maxSize: ${maxSize} -> New size: ${newWidth} x ${newHeight}`);
   } else {
     // Dynamically scale down images larger than 1000px to a max of 800px
     const targetSize = 800;
@@ -38,7 +38,7 @@ const resizeMat = (image: cv.Mat, maxSize?: number): cv.Mat => {
     newWidth = Math.round(width * scaleFactor);
     newHeight = Math.round(height * scaleFactor);
 
-    console.log(`Resizing dynamically -> New size: ${newWidth} x ${newHeight} (Scale Factor: ${scaleFactor})`);
+    // console.log(`Resizing dynamically -> New size: ${newWidth} x ${newHeight} (Scale Factor: ${scaleFactor})`);
   }
 
   const newSize = new cv.Size(newWidth, newHeight);
@@ -106,7 +106,7 @@ export default function Home() {
       img.onload = () => {
         if (isCvLoaded) {
           const mat = cv.imread(img);
-          console.log(mat.rows, mat.cols);
+          // console.log(mat.rows, mat.cols);
           const resizedMat = resizeMat(mat, 800);
           mat.delete(); // Clean up original high-res Mat// will comment this after doing unit test later on after this projects
           setOriginalMat(resizedMat);

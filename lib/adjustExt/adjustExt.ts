@@ -16,6 +16,7 @@ async function cleanAndExecuteAdjustment(
         return currentImageEdit;
     }
 
+    console.debug(adjustmentFunction.name);
     // let imageDeltaProcessor = imageDeltaProcessor();
     let cleanUpCurrentDelta = new cv.Mat();
     
@@ -26,29 +27,29 @@ async function cleanAndExecuteAdjustment(
     currentImageEdit.convertTo(cureendEditMat, cv.CV_16SC3);
 
     if (currentValue != 0) {
-        console.debug("excute 1 ");
+        
         const currentValueMat = await computeDelta(originalImage, currentValue, adjustmentFunction);
-        console.debug("excute 2 ");
+        
         currentValueMat.convertTo(currentValueMat, cv.CV_16SC3);
-        console.debug("excute 3 ");
+        
         cleanUpCurrentDelta = new cv.Mat();
 
         cv.subtract(cureendEditMat, currentValueMat, cleanUpCurrentDelta);
-        console.debug("excute 4 ");
+        
     } else {
         cleanUpCurrentDelta = cureendEditMat;
-        console.debug("excute 5 ");
+        
     }
     const resultDeltaMat = await computeDelta(originalImage, newValue, adjustmentFunction);
     const result16Bit = new cv.Mat();
     resultDeltaMat.convertTo(result16Bit, cv.CV_16SC3);
-    console.debug("excute 6 ");
+    
     const finalMat = new cv.Mat();
     cv.add(cleanUpCurrentDelta, result16Bit, finalMat);
-    console.debug("excute 7 ");
+    
     const finalMatConverted = new cv.Mat();
     finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
-    console.debug("excute 8 ");
+    
     return finalMatConverted;
 }
 
