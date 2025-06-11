@@ -16,7 +16,7 @@ async function cleanAndExecuteAdjustment(
         return currentImageEdit;
     }
 
-    let cleanUpCurrentDelta: cv.Mat | null = null;
+    let cleanUpCurrentDelta = new cv.Mat();
     
     console.debug("newValue", newValue);
     const originalImage16Bit = new cv.Mat();
@@ -27,21 +27,23 @@ async function cleanAndExecuteAdjustment(
     // before
     logImage(currentImageEdit, "before 1 ");
     // const testOri = ;
-    if (currentValue !== 0) {
+    if (currentValue != 0) {
         // Get adjust value from original
-        const currentAdjustImage = await action(originalImage, currentValue);
 
-        logImage(currentAdjustImage, "currentAdjustImage 2 ");
-        // TODO check this code if correct to remove alpha
-        const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
+        const deltaMat = await computeDelta(newOriginalImage, adjustment.score, adjustment.func);
+        // const currentAdjustImage = await action(originalImage, currentValue);
 
-        logImage(currentValueImage, "currentValueImage 3 ");
+        // logImage(currentAdjustImage, "currentAdjustImage 2 ");
+        // // TODO check this code if correct to remove alpha
+        // const currentValueImage = minusCvMat(currentAdjustImage, originalImage);
 
-        // let remove expousre value from currentImageEdit
-        cleanUpCurrentDelta = minusCvMat(currentImageEdit, currentValueImage);
+        // logImage(currentValueImage, "currentValueImage 3 ");
 
-        logImage(cleanUpCurrentDelta, "cleanUpCurrentDelta 4 ");
-        // currentValueImage.delete();
+        // // let remove expousre value from currentImageEdit
+        // cleanUpCurrentDelta = minusCvMat(currentImageEdit, currentValueImage);
+
+        // logImage(cleanUpCurrentDelta, "cleanUpCurrentDelta 4 ");
+        // // currentValueImage.delete();
     } else {
         // no need to clean up, just use current image edit, since the value is 0
         // console.debug("no need to clean up");
@@ -64,7 +66,7 @@ async function cleanAndExecuteAdjustment(
 
     plusDeltaValue.convertTo(finalResult, cv.CV_8UC3);
 
-    logImage(finalResult, "after 6 ");
+    // logImage(finalResult, "after 6 ");
     return finalResult;
 }
 
