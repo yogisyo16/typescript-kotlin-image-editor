@@ -147,8 +147,8 @@ export class HonchoEditorClass implements HonchoEditor {
     this.listener?.onConfigChange(this.config);
     const end = performance.now();
     // const end = Date.now();
-    const timeInMillis = end - start;
-    const timeSecond = timeInMillis / 1000;
+    const timeMiliSecond = end - start;
+    const timeSecond = timeMiliSecond / 1000;
     console.log(`Execution time: ${timeSecond.toFixed(3)} s`);
   }
 
