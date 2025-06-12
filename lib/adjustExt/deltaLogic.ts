@@ -30,18 +30,18 @@ async function computeDelta(
 ): Promise<cv.Mat> {
     const cleanup: cv.Mat[] = [];
     try {
-        console.debug("Compute Delta 1 ")
+        
         const originalImage16Bit = new cv.Mat();
         originalImage.convertTo(originalImage16Bit, cv.CV_16SC3);
-        console.debug("Compute Delta 2 ")
+        
         const imageAdjusted = await action(originalImage, value);
-        console.debug("Compute Delta 3 ")
+        
         const imageAdjusted16Bit = new cv.Mat();
         imageAdjusted.convertTo(imageAdjusted16Bit, cv.CV_16SC3);
-        console.debug("Compute Delta 4 ")
+        
         const deltaMat = new cv.Mat();
         cv.subtract(imageAdjusted16Bit, originalImage16Bit, deltaMat);
-        console.debug("Compute Delta 5 ")
+        
         return deltaMat;
     } catch (err) {
         console.error("Failed inside computeDelta:", (err as Error).message);
