@@ -1,20 +1,68 @@
 import cv from "@techstark/opencv-js";
-import { Adjustment } from "@/lib/HonchoEditor";
-import { convertTo16BitImage, convert8BitImage } from "@/lib/adjustExt/bitImageChecking";
+import { Config } from "@/lib/HonchoEditor";
+import openCVAdjustments from "@/lib/openCVAdjustment"
 
-async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Adjustment[]): Promise<cv.Mat> {
-    const newOriginalImage = convertTo16BitImage(originalImage);
-    let plusDelta = new cv.Mat();
+export async function applyAllAdjustments(
+    originalImage: cv.Mat, 
+    configScore: Config,
+
+): Promise<cv.Mat> {
+    const newOriginalImage = new cv.Mat();
+
+    originalImage.convertTo(newOriginalImage, cv.CV_16SC3);
+
+    console.debug("Done 1");
+
+    const totalDelta = cv.Mat.zeros(originalImage.rows, originalImage.cols, cv.CV_16SC3);
+
+    console.debug("Total Delta Before Input:", totalDelta.channels(), " + ", totalDelta.type());
 
     try {
-        for (const adjustment of adjustmentPipeline) {
+        console.debug("Done 2");
+        const adjusting = [
+          { score: configScore.Exposure, func: openCVAdjustments.modifyImageExposure },
+          { score: configScore.Contrast, func: openCVAdjustments.modifyImageContrast },
+          { score: configScore.Highlights, func: openCVAdjustments.modifyImageHighlights },
+          { score: configScore.Shadow, func: openCVAdjustments.modifyImageShadows },
+          { score: configScore.Whites, func: openCVAdjustments.modifyImageWhites },
+          { score: configScore.Blacks, func: openCVAdjustments.modifyImageBlacks },
+          { score: configScore.Temperature, func: openCVAdjustments.modifyImageTemperature },
+          { score: configScore.Tint, func: openCVAdjustments.modifyImageTint },
+          { score: configScore.Vibrance, func: openCVAdjustments.modifyImageVibrance },
+          { score: configScore.Saturation, func: openCVAdjustments.modifyImageSaturation },
+        ];
+
+
+        console.debug("Done 3");
+        for (const adjustment of adjusting) {
+            console.debug("Adjustment:", adjustment.func.name, "Score:", adjustment.score);
             if (adjustment.score !== 0) {
                 const deltaMat = await computeDelta(newOriginalImage, adjustment.score, adjustment.func);
-                plusDelta = await addTotalDelta(newOriginalImage, deltaMat);
-                // deltaMat.delete();
+                cv.add(totalDelta, deltaMat, totalDelta);
+                deltaMat.delete();
             }
         }
-        const finalImage = convert8BitImage(plusDelta);
+
+        console.debug("Done 4");
+
+        const finalImage16Bit = new cv.Mat();
+
+        console.debug("Original Image Converter :", newOriginalImage.channels(), " + ", newOriginalImage.type());
+
+        console.debug("Total Delta :", totalDelta.channels(), " + ", totalDelta.type());
+        
+        cv.add(newOriginalImage, totalDelta, finalImage16Bit);
+
+        console.debug("Final Image after adding original :", finalImage16Bit);
+
+        console.debug("Done 5");
+
+        const finalImage = new cv.Mat();
+
+        finalImage16Bit.convertTo(finalImage, cv.CV_8UC3);
+
+        console.debug("Done 6");
+
         return finalImage;
 
     } catch (err) {
@@ -23,7 +71,7 @@ async function applyAllAdjustments(originalImage: cv.Mat, adjustmentPipeline: Ad
     }
 }
 
-async function computeDelta(
+export async function computeDelta(
     originalImage: cv.Mat,
     value: number,
     action: (image: cv.Mat, value: number) => Promise<cv.Mat>,
@@ -59,4 +107,4 @@ async function addTotalDelta(originalImage: cv.Mat, adjustedImage: cv.Mat): Prom
     return deltaMat;
 }
 
-export default computeDelta;
+// export default computeDelta;

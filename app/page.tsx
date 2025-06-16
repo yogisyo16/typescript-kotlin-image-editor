@@ -107,7 +107,7 @@ export default function Home() {
         if (isCvLoaded) {
           const mat = cv.imread(img);
           // console.log(mat.rows, mat.cols);
-          const resizedMat = resizeMat(mat, 1000);
+          const resizedMat = resizeMat(mat, 800);
           mat.delete(); // Clean up original high-res Mat// will comment this after doing unit test later on after this projects
           setOriginalMat(resizedMat);
 
@@ -161,6 +161,7 @@ export default function Home() {
     }
   }, [editorRef]);
 
+  // Not used, now using HonchoEditorImpl
   const saveHistory = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.configHistotrypush(adjustments);

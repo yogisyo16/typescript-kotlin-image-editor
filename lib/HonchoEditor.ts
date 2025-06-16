@@ -1,5 +1,4 @@
 import cv from "@techstark/opencv-js";
-import openCVAdjustments from "@/lib/openCVAdjustment";
 
 export interface Config {
   // Declaration for adjustments
@@ -27,15 +26,9 @@ export interface Adjustment {
 }
 
 export interface HonchoEditor {
-  consume(serverConfig: Config[]): string;
-  // Image getter
-  onImageUpdate(inputImage: cv.Mat): cv.Mat;
-
+  // Sync Socket
+  syncConfig(serverConfig: Config[]): Promise<void>;
   adjust(type: AdjustType, score: number): Promise<void>;
-  
-  // Config History for undo and redo
-  configHistotrypush(config: Config): void;
-  
   // Config undo - redo - reset
   undo(config: Config): Promise<void>;
   redo(config: Config): Promise<void>;

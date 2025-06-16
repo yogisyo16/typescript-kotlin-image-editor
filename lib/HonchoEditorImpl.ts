@@ -3,30 +3,16 @@ import openCVAdjustments from "@/lib/openCVAdjustment";
 import cleanAndExecuteAdjustment from "@/lib/adjustExt/adjustExt";
 import cv from "@techstark/opencv-js";
 import { useState } from "react";
+import { applyAllAdjustments } from "./adjustExt/deltaLogic";
 
 // Hook to manage and setup OpenCV
 export function useOpenCV() {
   const [isCvLoaded, setIsCvLoaded] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageLoaded] = useState(false);
 
   const onOpenCVLoad = () => {
     setIsCvLoaded(true);
   };
-
-  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const files = e.target.files;
-  //   if (!files || files.length === 0) return;
-
-  //   const file = files[0];
-  //   const reader = new FileReader();
-  //   reader.onload = (evt) => {
-  //     if (evt.target?.readyState === FileReader.DONE && imgRef.current) {
-  //       imgRef.current.src = evt.target.result as string;
-  //       setImageLoaded(true);
-  //     }
-  //   };
-  //   reader.readAsDataURL(file);
-  // };
 
   return {
     isCvLoaded,
@@ -36,7 +22,6 @@ export function useOpenCV() {
 }
 
 export class HonchoEditorClass implements HonchoEditor {
-  // For any Input convert into cv.Mat first
   private inputImage: cv.Mat;
   private currentImageEdit: cv.Mat;
   private listener: Listener | null = null;
@@ -65,91 +50,109 @@ export class HonchoEditorClass implements HonchoEditor {
     this.listener = listener;
   }
 
-  // Getter for config
-  public getConfig(): Config {
-    return { ...this.config };
-  }
+  async syncConfig(serverConfig: Config[]): Promise<void> {
+    // configHistory get from server
+    this.configHistory = serverConfig;
 
-  // Setter for individual config scores
-  public setConfigscore(key: keyof Config, score: number): void {
-    this.config = { ...this.config, [key]: score };
-  }
+    this.config = serverConfig[serverConfig.length - 1];
 
-  consume(serverConfig: Config[]): string {
-    throw Error("Not implemented");
-  }
-
-  onImageUpdate(inputImage: cv.Mat): cv.Mat {
-    return inputImage.clone();
+    await this.applyConfig();
   }
 
   async adjust(type: AdjustType, score: number): Promise<void> {
-
-    const start = performance.now();
-    
-    // const start = Date.now();
-    // console.log(start);
-    
+      // AdjustType Checking
     if (type == AdjustType.Exposure) {
-        console.log("Adjustmen Type: Exposure");
+
+      // Applying adjustment, that taking from adjustment type
       this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Exposure, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageExposure);
       
-      // Update score exposure publish to UI
+      // Update for adjustment in UI
       this.config.Exposure = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Temperature) {
-        console.log("Adjustmen Type: Temperature");
+
+      // Applying adjustment, that taking from adjustment type
       this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Temperature, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTemperature);
 
-        this.config.Temperature = score;
+      // Update for adjustment in UI
+      this.config.Temperature = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Tint) {
-        console.log("Adjustmen Type: Tint");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
 
-        this.config.Tint = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Tint, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageTint);
+
+      // Update for adjustment in UI
+      this.config.Tint = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Contrast) {
-        console.log("Adjustmen Type: Contrast");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
 
-        this.config.Contrast = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Contrast, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageContrast);
+
+      // Update for adjustment in UI
+      this.config.Contrast = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Highlights) {
-      console.log("Adjustmen Type: Highlights");  
+
+      // Applying adjustment, that taking from adjustment type
       this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Highlights, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageHighlights);
 
-        this.config.Highlights = score;
+      // Update for adjustment in UI
+      this.config.Highlights = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Shadow) {
-        console.log("Adjustmen Type: Shadow");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
 
-        this.config.Shadow = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Shadow, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageShadows);
+
+      // Update for adjustment in UI
+      this.config.Shadow = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Blacks) {
-        console.log("Adjustmen Type: Blacks");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
 
-        this.config.Blacks = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Blacks, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageBlacks);
+
+      // Update for adjustment in UI
+      this.config.Blacks = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Whites) {
-        console.log("Adjustmen Type: Whites");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
 
-        this.config.Whites = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Whites, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageWhites);
+
+      // Update for adjustment in UI
+      this.config.Whites = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Saturation) {
-        console.log("Adjustmen Type: Saturation");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
 
-        this.config.Saturation = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Saturation, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageSaturation);
+
+      // Update for adjustment in UI
+      this.config.Saturation = score;
+
+      // AdjustType Checking
     } else if (type == AdjustType.Vibrance) {
-        console.log("Adjustmen Type: Vibrance");
-        this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
 
-        this.config.Vibrance = score;
+      // Applying adjustment, that taking from adjustment type
+      this.currentImageEdit = await cleanAndExecuteAdjustment(this.config.Vibrance, score, this.inputImage, this.currentImageEdit, openCVAdjustments.modifyImageVibrance);
+
+      // Update for adjustment in UI
+      this.config.Vibrance = score;
     }
     
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
-    const end = performance.now();
-    // const end = Date.now();
-    const timeMiliSecond = end - start;
-    const timeSecond = timeMiliSecond / 1000;
-    console.log(`Execution time: ${timeSecond.toFixed(3)} s`);
   }
 
   configHistotrypush() {
@@ -172,75 +175,37 @@ export class HonchoEditorClass implements HonchoEditor {
 
   // Logic for undo
   async undo(): Promise<void> {
-    // You must have more than one state to undo (the initial state and at least one change).
     if (this.configHistory.length > 1) {
-      const currentState = this.configHistory.pop();
-      if (currentState) {
-        this.redoStack.push(currentState);
-      }
-      const previousState = this.configHistory[this.configHistory.length - 1];
-      this.config = { ...previousState }; // Update the internal config
+        const currentState = this.configHistory.pop();
+        if (currentState) {
+            this.redoStack.push(currentState);
+        }
 
-      const adjustmentPipeline = [
-        { score: this.config.Exposure, func: openCVAdjustments.modifyImageExposure, name: AdjustType.Exposure },
-        { score: this.config.Contrast, func: openCVAdjustments.modifyImageContrast, name: AdjustType.Contrast },
-        { score: this.config.Highlights, func: openCVAdjustments.modifyImageHighlights, name: AdjustType.Highlights },
-        { score: this.config.Shadow, func: openCVAdjustments.modifyImageShadows, name: AdjustType.Shadow },
-        { score: this.config.Whites, func: openCVAdjustments.modifyImageWhites, name: AdjustType.Whites },
-        { score: this.config.Blacks, func: openCVAdjustments.modifyImageBlacks, name: AdjustType.Blacks },
-        { score: this.config.Temperature, func: openCVAdjustments.modifyImageTemperature, name: AdjustType.Temperature },
-        { score: this.config.Tint, func: openCVAdjustments.modifyImageTint, name: AdjustType.Tint },
-        { score: this.config.Vibrance, func: openCVAdjustments.modifyImageVibrance, name: AdjustType.Vibrance },
-        { score: this.config.Saturation, func: openCVAdjustments.modifyImageSaturation, name: AdjustType.Saturation },
-      ];
-      
-      // // const undoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
-      
-      // if (this.currentImageEdit) this.currentImageEdit.delete();
-      // this.currentImageEdit = undoneImage;
+        const previousState = this.configHistory[this.configHistory.length - 1];
+        this.config = { ...previousState };
 
-      // this.listener?.onImageRendered(this.currentImageEdit);
-      // this.listener?.onConfigChange(this.config);
-
+        await this.applyConfig();
+        
     } else {
-      console.error("Cannot undo. At original state.");
+        console.error("Cannot undo. At original state.");
     }
   }
 
   async redo(): Promise<void> {
     if (this.redoStack.length > 0) {
-      const redoState = this.redoStack.pop();
-      if (redoState) {
-        this.configHistory.push(redoState);
-        this.config = { ...redoState };
+        const redoState = this.redoStack.pop();
+        if (redoState) {
+            this.configHistory.push(redoState);
+            this.config = { ...redoState };
 
-        const adjustmentPipeline = [
-          { score: this.config.Exposure, func: openCVAdjustments.modifyImageExposure, name: AdjustType.Exposure },
-          { score: this.config.Contrast, func: openCVAdjustments.modifyImageContrast, name: AdjustType.Contrast },
-          { score: this.config.Highlights, func: openCVAdjustments.modifyImageHighlights, name: AdjustType.Highlights },
-          { score: this.config.Shadow, func: openCVAdjustments.modifyImageShadows, name: AdjustType.Shadow },
-          { score: this.config.Whites, func: openCVAdjustments.modifyImageWhites, name: AdjustType.Whites },
-          { score: this.config.Blacks, func: openCVAdjustments.modifyImageBlacks, name: AdjustType.Blacks },
-          { score: this.config.Temperature, func: openCVAdjustments.modifyImageTemperature, name: AdjustType.Temperature },
-          { score: this.config.Tint, func: openCVAdjustments.modifyImageTint, name: AdjustType.Tint },
-          { score: this.config.Vibrance, func: openCVAdjustments.modifyImageVibrance, name: AdjustType.Vibrance },
-          { score: this.config.Saturation, func: openCVAdjustments.modifyImageSaturation, name: AdjustType.Saturation },
-        ];
-
-        // const redoneImage = await applyAllAdjustments(this.inputImage, adjustmentPipeline);
-        // if (this.currentImageEdit) this.currentImageEdit.delete();
-        // this.currentImageEdit = redoneImage;
-
-        // this.listener?.onImageRendered(this.currentImageEdit);
-        // this.listener?.onConfigChange(this.config);
-      }
+            await this.applyConfig();
+        }
     } else {
-      console.error("Cannot redo. At latest state.");
+        console.error("Cannot redo. At latest state.");
     }
   }
 
-
-  async reset(): Promise<void> { // Made async to match the pattern
+  async reset(): Promise<void> {
     const initialConfig = {
       Exposure: 0, Temperature: 0, Tint: 0, Highlights: 0, Shadow: 0,
       Blacks: 0, Whites: 0, Contrast: 0, Saturation: 0, Vibrance: 0,
@@ -255,5 +220,18 @@ export class HonchoEditorClass implements HonchoEditor {
 
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+  }
+
+  private async applyConfig(): Promise<void> {
+      // Re-apply all adjustments from the previous state
+      const undoneImage = await applyAllAdjustments(this.inputImage, this.config);
+
+      // Clean up the old image matrix and assign the new one
+      if (this.currentImageEdit) this.currentImageEdit.delete();
+      this.currentImageEdit = undoneImage;
+
+      // Notify listeners to update the UI
+      this.listener?.onImageRendered(this.currentImageEdit);
+      this.listener?.onConfigChange(this.config);
   }
 }

@@ -402,6 +402,7 @@ async function modifyImageTemperature(
     // This is the main logical change. We separate the warm and cool paths entirely.
     if (colorTemperature > 0) {
       await boostWarmTemperature(colorTemperature, srcClone);
+      
     } else {
       cv.cvtColor(srcClone, srcClone, cv.COLOR_BGRA2BGR);
 
@@ -448,8 +449,6 @@ async function modifyImageTemperature(
     cv.cvtColor(srcClone, srcClone, cv.COLOR_RGB2RGBA);
 
     const result = srcClone.clone();
-    // const image16Bit = result.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
-    // result.convertTo(result, image16Bit);
     return result;
 
   } catch (error) {
@@ -458,6 +457,28 @@ async function modifyImageTemperature(
   } finally {
     cleanUp.forEach((mat) => mat.delete());
   }
+}
+
+function logImage(image: cv.Mat, text: string) {
+  const testRow = 200;
+  const testCols = 310;
+  const testRow1 = 270;
+  const testCols1 = 430;
+  const testRow2 = 310;
+  const testCols2 = 450;
+
+  console.debug(text);
+  const finalPixel = image.ucharPtr(testRow, testCols);
+  const finalPixel1 = image.ucharPtr(testRow1, testCols1);
+  const finalPixel2 = image.ucharPtr(testRow2, testCols2);
+  const [B, G, R, A] = finalPixel;
+  const [B1, G1, R1, A1] = finalPixel1;
+  const [B2, G2, R2, A2] = finalPixel2;
+  console.debug('Channels: ', image.channels());
+  console.debug(`Pixel Values: B=${B}, G=${G}, R=${R}, A=${A}`);
+  console.debug(`Pixel Values: B=${B1}, G=${G1}, R=${R1}, A=${A1}`);
+  console.debug(`Pixel Values: B=${B2}, G=${G2}, R=${R2}, A=${A2}`);
+  console.log("-----------------------------------------------")
 }
 
 export default modifyImageTemperature;

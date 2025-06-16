@@ -118,7 +118,7 @@ async function applyMidtonesContrast(originalMat: cv.Mat, contrastFactor: number
     console.error(error);
     return originalMat;
   } finally {
-    cleanUp.forEach((mat) => mat.delete());
+    // cleanUp.forEach((mat) => mat.delete());
   }
 }
 
@@ -237,20 +237,22 @@ async function boostRedContrast(originalMat: cv.Mat, lum: cv.Mat, oriA: cv.Mat):
     console.log(error);
     return originalMat;
   } finally {
-    cleanUp.forEach((mat) => mat.delete());
+    // cleanUp.forEach((mat) => mat.delete());
   }
 }
 
 // -- Implement adjustment Contrast
 async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> {
   const cleanUp: cv.Mat[] = [];
-
+  logImage(src, 'Original Image');
   try {
     const imageToProcess = src.clone();
+    logImage(imageToProcess, 'Original Image Clone');
     cv.cvtColor(imageToProcess, imageToProcess, cv.COLOR_BGRA2BGR);
+    logImage(imageToProcess, 'Image color into COLOR_BGRA2BGR');
     const contrastFactor = score / 10;
 
-    if (contrastFactor >= 0) {
+    if (contrastFactor > 0) {
       const lowVal = 4.0;
       const highVal = 9.0;
       const midpoint = 0.5;
@@ -261,11 +263,20 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       const scalar255 = new cv.Mat(normalizeImg.rows, normalizeImg.cols, cv.CV_32FC3, new cv.Scalar(255, 255, 255));
       cv.divide(normalizeImg, scalar255, normalizeImg);
 
-      const resultImg = await sigmoid(normalizeImg, contrastScale, midpoint, 0.9);
+      logImage(normalizeImg, 'normalize Image');
+
+      const resultImg = await sigmoid(normalizeImg, contrastScale, midpoint, 1.0);
+      
+      logImage(resultImg, 'sigmoid');
+      
       cv.multiply(resultImg, scalar255, resultImg);
+      logImage(resultImg, 'multiply');
       resultImg.convertTo(resultImg, cv.CV_8U);
+      logImage(resultImg, 'CV_8U');
       cleanUp.push(normalizeImg, scalar255);
       cv.cvtColor(resultImg, resultImg, cv.COLOR_BGR2BGRA);
+
+      logImage(resultImg, 'Result image');
 
       return resultImg;
     } else {
@@ -277,7 +288,7 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       cv.split(labImg, labChannels);
       cleanUp.push(labImg);
 
-      const adjustedScore = contrastFactor / 100;
+      const adjustedScore = contrastFactor / 0.36;
       const lum = labChannels.get(0).clone();
       const oriA = labChannels.get(1).clone();
       const fScore = 131.0 * (adjustedScore + 127) / (127 * (131 - adjustedScore));
@@ -293,21 +304,48 @@ async function modifyImageContrast(src: cv.Mat, score: number): Promise<cv.Mat> 
       resultMat.convertTo(resultMat, cv.CV_8U);
       cleanUp.push(floatMat);
 
+      logImage(resultMat, 'CV_8U');
+
       const boostScore = 60 * Math.pow(Math.abs(contrastFactor) / 10.0, 1.5);
       const afterMidtonesAdj = await applyMidtonesContrast(resultMat, boostScore);
       const afterRedBoostAdj = await boostRedContrast(afterMidtonesAdj, lum, oriA);
       cleanUp.push(lum, oriA, resultMat, afterMidtonesAdj);
 
+      logImage(afterMidtonesAdj, 'After Midtones');
+
       cv.cvtColor(afterRedBoostAdj, afterRedBoostAdj, cv.COLOR_BGR2BGRA);
 
+      logImage(afterRedBoostAdj, 'Last Changes');
       return afterRedBoostAdj;
     }
   } catch (error) {
     console.log(error);
     return src;
   } finally {
-    cleanUp.forEach((mat) => mat.delete());
+    // cleanUp.forEach((mat) => mat.delete());
   }
+}
+
+function logImage(image: cv.Mat, text: string) {
+  const testRow = 200;
+  const testCols = 310;
+  const testRow1 = 270;
+  const testCols1 = 430;
+  const testRow2 = 310;
+  const testCols2 = 450;
+
+  console.debug(text);
+  const finalPixel = image.ucharPtr(testRow, testCols);
+  const finalPixel1 = image.ucharPtr(testRow1, testCols1);
+  const finalPixel2 = image.ucharPtr(testRow2, testCols2);
+  const [B, G, R, A] = finalPixel;
+  const [B1, G1, R1, A1] = finalPixel1;
+  const [B2, G2, R2, A2] = finalPixel2;
+  console.debug('Channels: ', image.channels());
+  console.debug(`Pixel Values: B=${B}, G=${G}, R=${R}, A=${A}`);
+  console.debug(`Pixel Values: B=${B1}, G=${G1}, R=${R1}, A=${A1}`);
+  console.debug(`Pixel Values: B=${B2}, G=${G2}, R=${R2}, A=${A2}`);
+  console.log("-----------------------------------------------")
 }
 
 export default modifyImageContrast;

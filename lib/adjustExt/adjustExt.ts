@@ -1,6 +1,5 @@
 import cv from "@techstark/opencv-js";
-import { convertTo16BitImage } from "@/lib/adjustExt/bitImageChecking";
-import computeDelta from "@/lib/adjustExt/deltaLogic";
+import {computeDelta} from "@/lib/adjustExt/deltaLogic";
 
 // cleanAndExecuteAdjustment to remove the delta from currentImageEdit
 // and apply with new value delta
@@ -18,7 +17,7 @@ async function cleanAndExecuteAdjustment(
     // currentImageEdit clean mat
     let cleanUpCurrentDelta = new cv.Mat();
     
-    // Converter to 16 bit
+    // Prepare empty matrix for converter to 16 bit
     const originalMat = new cv.Mat();
     const cureendEditMat = new cv.Mat();
 
@@ -44,14 +43,25 @@ async function cleanAndExecuteAdjustment(
 
     }
 
+    // Function to compute delta and execution adjustment
     const resultDeltaMat = await computeDelta(originalImage, newValue, adjustmentFunction);
+    
+    // Prepare empty matrix for converter to 16 bit
     const result16Bit = new cv.Mat();
+    
+    // Convert resultDeltaMat to 16 bit
     resultDeltaMat.convertTo(result16Bit, cv.CV_16SC3);
     
+    // Prepare empty matrix for final adjustment
     const finalMat = new cv.Mat();
+
+    // Add cleanUpCurrentDelta and result16Bit put it under finalMat
     cv.add(cleanUpCurrentDelta, result16Bit, finalMat);
     
+    // Prepare empty matrix for converter to 8 bit
     const finalMatConverted = new cv.Mat();
+
+    // Convert finalMat to 8 bit
     finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
     
     return finalMatConverted;
