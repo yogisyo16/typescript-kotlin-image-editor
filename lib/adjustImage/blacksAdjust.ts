@@ -1,13 +1,5 @@
 import cv from "@techstark/opencv-js";
 
-/**
- * Adjusts the black/shadow levels of an image using a YUV/LUT-based algorithm.
- * This version is corrected to only use Mat objects in arithmetic functions.
- *
- * @param {cv.Mat} src - The input image in RGBA format.
- * @param {number} score - The adjustment value. Positive values lift shadows; negative values crush them.
- * @returns {Promise<cv.Mat>} A new Mat object with the adjustment applied.
- */
 async function modifyImageBlacks(src: cv.Mat, score: number): Promise<cv.Mat> {
   const srcClone = src.clone();
   if (!srcClone || !srcClone.data) {
