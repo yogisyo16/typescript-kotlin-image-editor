@@ -153,6 +153,10 @@ export class HonchoEditorClass implements HonchoEditor {
     
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+    this.configHistotrypush();
+
+    console.debug("Config History: ", this.configHistory);
+    console.debug("Config Now: ", this.config);
   }
 
   configHistotrypush() {
