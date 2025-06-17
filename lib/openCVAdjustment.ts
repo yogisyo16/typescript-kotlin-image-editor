@@ -10,6 +10,7 @@ import modifyImageContrast from "@/lib/adjustImage/contrastAdjust";
 import modifyImageSaturation from "@/lib/adjustImage/saturationAdjust";
 import modifyImageVibrance from "@/lib/adjustImage/vibranceAdjust";
 
+// This interface used on undo/redo method to called the right function
 interface OpenCVAdjustments{
   modifyImageExposure(image: cv.Mat, score: number): Promise<cv.Mat>
   modifyImageContrast(image: cv.Mat, score: number): Promise<cv.Mat>

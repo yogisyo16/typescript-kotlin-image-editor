@@ -22,8 +22,11 @@ export function useOpenCV() {
 }
 
 export class HonchoEditorClass implements HonchoEditor {
+  // CV.Mat for inputImage
   private inputImage: cv.Mat;
+  // CV.Mat for currentImageEdit
   private currentImageEdit: cv.Mat;
+  //Listener
   private listener: Listener | null = null;
   // Config variable score
   private config: Config = {
@@ -39,10 +42,12 @@ export class HonchoEditorClass implements HonchoEditor {
     Vibrance: 0,
   };
   // For undo Redo
+  // Stack to save the previous state
   private configHistory: Config[] = [];
+  // Stack for redo
   private redoStack: Config[] = [];
-  // private currentHistoryIndex: number = -1;
 
+  // Constructor to setup the editor
   constructor(inputImage: cv.Mat, listener: Listener) {
     this.inputImage = inputImage.clone();
     this.currentImageEdit = this.inputImage.clone();
@@ -50,6 +55,7 @@ export class HonchoEditorClass implements HonchoEditor {
     this.listener = listener;
   }
 
+  // Sync Socket (Later be use on)
   async syncConfig(serverConfig: Config[]): Promise<void> {
     // configHistory get from server
     this.configHistory = serverConfig;
@@ -59,6 +65,7 @@ export class HonchoEditorClass implements HonchoEditor {
     await this.applyConfig();
   }
 
+  // Function for first adjustment image
   async adjust(type: AdjustType, score: number): Promise<void> {
       // AdjustType Checking
     if (type == AdjustType.Exposure) {

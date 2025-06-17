@@ -53,9 +53,11 @@ async function modifyImageTemperature(
         // --- Main Logic Branching (Original, Correct Order) ---
         if (colorTemperature > 0) {
             // Positive temperatures call the WARM function
+            console.debug('WARM');
             adjustedMat = boostWarmTemperature(colorTemperature, originalMat, lumScalingFactor);
         } else {
             // Negative temperatures call the COOL functions
+            console.debug('COOL');
             let blueScaleScore = 4.9;
             if (colorTemperature < -50) {
                 const x = Math.abs(colorTemperature);

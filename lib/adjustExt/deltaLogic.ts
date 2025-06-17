@@ -3,71 +3,68 @@ import { Config } from "@/lib/HonchoEditor";
 import openCVAdjustments from "@/lib/openCVAdjustment"
 
 export async function applyAllAdjustments(
-    originalImage: cv.Mat, 
+    originalImage: cv.Mat,
     configScore: Config,
-
 ): Promise<cv.Mat> {
-    const newOriginalImage = new cv.Mat();
-
-    originalImage.convertTo(newOriginalImage, cv.CV_16SC3);
-
-    console.debug("Done 1");
-
-    const totalDelta = cv.Mat.zeros(originalImage.rows, originalImage.cols, cv.CV_16SC3);
-
-    console.debug("Total Delta Before Input:", totalDelta.channels(), " + ", totalDelta.type());
-
+    const cleanup: cv.Mat[] = [];
     try {
-        console.debug("Done 2");
-        const adjusting = [
-          { score: configScore.Exposure, func: openCVAdjustments.modifyImageExposure },
-          { score: configScore.Contrast, func: openCVAdjustments.modifyImageContrast },
-          { score: configScore.Highlights, func: openCVAdjustments.modifyImageHighlights },
-          { score: configScore.Shadow, func: openCVAdjustments.modifyImageShadows },
-          { score: configScore.Whites, func: openCVAdjustments.modifyImageWhites },
-          { score: configScore.Blacks, func: openCVAdjustments.modifyImageBlacks },
-          { score: configScore.Temperature, func: openCVAdjustments.modifyImageTemperature },
-          { score: configScore.Tint, func: openCVAdjustments.modifyImageTint },
-          { score: configScore.Vibrance, func: openCVAdjustments.modifyImageVibrance },
-          { score: configScore.Saturation, func: openCVAdjustments.modifyImageSaturation },
+        // Create a 16-bit version of the original image to serve as our base.
+        const newOriginalMat = new cv.Mat();
+        const convert16Bit = originalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
+        originalImage.convertTo(newOriginalMat, convert16Bit);
+        cleanup.push(newOriginalMat);
+
+        // Create a 16-bit accumulator, initialized to all zeros, to store the sum of all changes.
+        const totalDelta = cv.Mat.zeros(originalImage.rows, originalImage.cols, convert16Bit);
+        cleanup.push(totalDelta);
+
+        // Define the pipeline based on the incoming configScore object.
+        const adjustmentPipeline = [
+            { score: configScore.Exposure, func: openCVAdjustments.modifyImageExposure },
+            { score: configScore.Contrast, func: openCVAdjustments.modifyImageContrast },
+            { score: configScore.Highlights, func: openCVAdjustments.modifyImageHighlights },
+            { score: configScore.Shadow, func: openCVAdjustments.modifyImageShadows },
+            { score: configScore.Whites, func: openCVAdjustments.modifyImageWhites },
+            { score: configScore.Blacks, func: openCVAdjustments.modifyImageBlacks },
+            { score: configScore.Temperature, func: openCVAdjustments.modifyImageTemperature },
+            { score: configScore.Tint, func: openCVAdjustments.modifyImageTint },
+            { score: configScore.Vibrance, func: openCVAdjustments.modifyImageVibrance },
+            { score: configScore.Saturation, func: openCVAdjustments.modifyImageSaturation },
         ];
 
-
-        console.debug("Done 3");
-        for (const adjustment of adjusting) {
-            console.debug("Adjustment:", adjustment.func.name, "Score:", adjustment.score);
+        // Loop through each adjustment and calculate its delta.
+        for (const adjustment of adjustmentPipeline) {
             if (adjustment.score !== 0) {
-                const deltaMat = await computeDelta(newOriginalImage, adjustment.score, adjustment.func);
+                // IMPORTANT: We call computeDelta with the pristine, 8-bit `originalImage`,
+                // That's why not using the newOriginalMat
+                // which is exactly what your existing function expects.
+                const deltaMat = await computeDelta(originalImage, adjustment.score, adjustment.func);
+                
+                // Add this change to our running total.
                 cv.add(totalDelta, deltaMat, totalDelta);
+                
                 deltaMat.delete();
             }
         }
 
-        console.debug("Done 4");
-
-        const finalImage16Bit = new cv.Mat();
-
-        console.debug("Original Image Converter :", newOriginalImage.channels(), " + ", newOriginalImage.type());
-
-        console.debug("Total Delta :", totalDelta.channels(), " + ", totalDelta.type());
+        // Apply the total accumulated changes to our 16-bit base image.
+        cv.add(newOriginalMat, totalDelta, newOriginalMat);
         
-        cv.add(newOriginalImage, totalDelta, finalImage16Bit);
-
-        console.debug("Final Image after adding original :", finalImage16Bit);
-
-        console.debug("Done 5");
-
+        // Convert the final 16-bit result back to a displayable 8-bit image.
         const finalImage = new cv.Mat();
-
-        finalImage16Bit.convertTo(finalImage, cv.CV_8UC3);
-
-        console.debug("Done 6");
+        const conversionType8U = originalImage.channels() === 4 ? cv.CV_8UC4 : cv.CV_8UC3;
+        newOriginalMat.convertTo(finalImage, conversionType8U);
 
         return finalImage;
 
     } catch (err) {
         console.error("An error occurred during the adjustment pipeline:", err);
         return originalImage.clone();
+    } finally {
+        // 7. Clean up all created Mats to prevent memory leaks.
+        cleanup.forEach(mat => {
+            if (mat && !mat.isDeleted()) mat.delete();
+        });
     }
 }
 
@@ -78,16 +75,19 @@ export async function computeDelta(
 ): Promise<cv.Mat> {
     const cleanup: cv.Mat[] = [];
     try {
-        
+        // Create 16-bit versions of the original
         const originalImage16Bit = new cv.Mat();
         originalImage.convertTo(originalImage16Bit, cv.CV_16SC3);
         
+        // Do the Adjustment Function
         const imageAdjusted = await action(originalImage, value);
         
+        // Create 16-bit versions of the adjusted
         const imageAdjusted16Bit = new cv.Mat();
         imageAdjusted.convertTo(imageAdjusted16Bit, cv.CV_16SC3);
         
         const deltaMat = new cv.Mat();
+        // Here is the function for originalImage - AdjustedImage
         cv.subtract(imageAdjusted16Bit, originalImage16Bit, deltaMat);
         
         return deltaMat;
@@ -100,11 +100,3 @@ export async function computeDelta(
         });
     }
 }
-
-async function addTotalDelta(originalImage: cv.Mat, adjustedImage: cv.Mat): Promise<cv.Mat> {
-    const deltaMat = new cv.Mat();
-    cv.add(originalImage, adjustedImage, deltaMat);
-    return deltaMat;
-}
-
-// export default computeDelta;
