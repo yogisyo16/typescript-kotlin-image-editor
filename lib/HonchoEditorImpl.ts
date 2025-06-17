@@ -10,6 +10,7 @@ export function useOpenCV() {
   const [isCvLoaded, setIsCvLoaded] = useState(false);
   const [imageLoaded] = useState(false);
 
+  // OpenCV loader
   const onOpenCVLoad = () => {
     setIsCvLoaded(true);
   };
@@ -160,6 +161,8 @@ export class HonchoEditorClass implements HonchoEditor {
     
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
+
+    // To save config
     this.configHistotrypush();
   }
 
