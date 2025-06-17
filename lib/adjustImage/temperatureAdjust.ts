@@ -1,6 +1,6 @@
 import cv from "@techstark/opencv-js";
 import { sigmoid } from "@/lib/adjustImage/sigmoidAdjust";
-import { logImage } from "../utills/logImageAdjustment";
+import { logImage, logImageRgba } from "../utills/logImageAdjustment";
 
 async function modifyImageTemperature(
     src: cv.Mat,
@@ -15,6 +15,8 @@ async function modifyImageTemperature(
     
     const originalMat = src.clone();
     matCleanUp.push(originalMat);
+
+    logImage(originalMat, 'Original Image');
 
     try {
         // Ensure the input is a 3-channel BGR image
@@ -87,13 +89,13 @@ async function modifyImageTemperature(
         }
         
         // Final conversion for display on a web canvas
-        cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2BGRA);
+        cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2RGBA);
         return adjustedMat;
 
     } catch (error) {
         console.error("Failed to modify image temperature:", error);
         if (originalMat.channels() === 3) {
-            cv.cvtColor(originalMat, originalMat, cv.COLOR_BGR2BGRA);
+            cv.cvtColor(originalMat, originalMat, cv.COLOR_BGR2RGBA);
         }
         return originalMat;
     } finally {
@@ -239,6 +241,8 @@ function boostWarmTemperature(
 
         cv.merge(finalChannels, originalMat);
         originalMat.convertTo(originalMat, cv.CV_8U);
+
+        logImageRgba(originalMat, "boostWarmTemperature");
         return originalMat;
     } catch (error) {
         console.error("Error in boostWarmTemperature:", error); 
