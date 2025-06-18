@@ -1,5 +1,6 @@
 import cv from "@techstark/opencv-js";
 import { sigmoid } from "@/lib/adjustImage/sigmoidAdjust";
+import { logImage } from "../utills/logImageAdjustment";
 
 function boostMagenta(tintScale: number, originalMat: cv.Mat, lumScalingFactor: cv.Mat): cv.Mat {
   const cleanUp: cv.Mat[] = [];
@@ -278,24 +279,7 @@ async function modifyImageTint(src: cv.Mat, tint: number): Promise<cv.Mat> {
     cleanUp.push(lumScalingFactor);
     cv.cvtColor(adjustedMat, adjustedMat, cv.COLOR_BGR2BGRA);
     
-    const testRow = 200;
-    const testCols = 310;
-    const testRow1 = 270;
-    const testCols1 = 430;
-    const testRow2 = 310;
-    const testCols2 = 450;
-
-    console.log('Debug adjustedMat after conversion to BGR:');
-    const finalPixel = adjustedMat.ucharPtr(testRow, testCols);
-    const finalPixel1 = adjustedMat.ucharPtr(testRow1, testCols1);
-    const finalPixel2 = adjustedMat.ucharPtr(testRow2, testCols2);
-    const [B, G, R, A] = finalPixel;
-    const [B1, G1, R1, A1] = finalPixel1;
-    const [B2, G2, R2, A2] = finalPixel2;
-    console.log('Final BGRA Channels: ', adjustedMat.channels());
-    console.log(`Final BGRA Pixel Values: B=${B}, G=${G}, R=${R}, A=${A}`);
-    console.log(`Final BGRA Pixel Values: B=${B1}, G=${G1}, R=${R1}, A=${A1}`);
-    console.log(`Final BGRA Pixel Values: B=${B2}, G=${G2}, R=${R2}, A=${A2}`);
+    logImage(adjustedMat, 'Tint Adjusted Image', tint);
     
     return adjustedMat;
   } catch(error) {

@@ -4,6 +4,7 @@ import cleanAndExecuteAdjustment from "@/lib/adjustExt/adjustExt";
 import cv from "@techstark/opencv-js";
 import { useState } from "react";
 import { applyAllAdjustments } from "./adjustExt/deltaLogic";
+import { logImage, logImageWH } from "./utills/logImageAdjustment";
 
 // Hook to manage and setup OpenCV
 export function useOpenCV() {
@@ -162,6 +163,8 @@ export class HonchoEditorClass implements HonchoEditor {
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
 
+    logImage(this.currentImageEdit, "currentImageEdit", 0);
+    logImageWH(this.inputImage, "oriImage");
     // To save config
     this.configHistotrypush();
   }

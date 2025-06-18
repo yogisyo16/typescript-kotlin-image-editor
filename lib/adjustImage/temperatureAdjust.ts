@@ -16,7 +16,7 @@ async function modifyImageTemperature(
     const originalMat = src.clone();
     matCleanUp.push(originalMat);
 
-    logImage(originalMat, 'Original Image');
+    logImage(originalMat, 'Original Image', colorTemperature);
 
     try {
         // Ensure the input is a 3-channel BGR image
