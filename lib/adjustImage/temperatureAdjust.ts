@@ -112,7 +112,7 @@ function boostWarmTemperature(
     const matCleanUp: cv.Mat[] = [];
     const vecCleanUp: cv.MatVector[] = [];
     try {
-        const adjustedTemp = adjustedTemperature * 4.372;
+        const adjustedTemp = adjustedTemperature * 4.122;
 
         // --- BGR Scale Calculations with original Kotlin values ---
         const redScale = cv.Mat.ones(lumScalingFactor.size(), cv.CV_32F);
