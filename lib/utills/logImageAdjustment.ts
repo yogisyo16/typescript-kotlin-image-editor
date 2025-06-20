@@ -22,6 +22,10 @@ export function logImage(image: cv.Mat, text: string, score: number) {
   console.log("-----------------------------------------------")
 }
 
+export function differImage(image:cv.Mat, text: string){
+  
+}
+
 export function logImageRgba(image: cv.Mat, text: string) {
   const testRow = 300;
   const testCols = 610;

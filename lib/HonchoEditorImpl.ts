@@ -159,6 +159,8 @@ export class HonchoEditorClass implements HonchoEditor {
       // Update for adjustment in UI
       this.config.Vibrance = score;
     }
+
+    this.currentImageEdit.convertTo(this.currentImageEdit,cv.CV_8U);
     
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);

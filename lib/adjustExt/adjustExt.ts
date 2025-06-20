@@ -1,4 +1,4 @@
-import cv from "@techstark/opencv-js";
+import cv, { Point } from "@techstark/opencv-js";
 import {computeDelta} from "@/lib/adjustExt/deltaLogic";
 import { logImage } from "../utills/logImageAdjustment";
 
@@ -68,7 +68,8 @@ async function cleanAndExecuteAdjustment(
     finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
 
     
-    return finalMatConverted;
+    
+    return finalMat;
 }
 
 export default cleanAndExecuteAdjustment;
