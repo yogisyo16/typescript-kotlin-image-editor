@@ -1,6 +1,7 @@
 import cv from "@techstark/opencv-js";
 import { Config } from "@/lib/HonchoEditor";
 import openCVAdjustments from "@/lib/openCVAdjustment"
+import { logImage } from "../utills/logImageAdjustment";
 
 export async function applyAllAdjustments(
     originalImage: cv.Mat,
@@ -89,6 +90,9 @@ export async function computeDelta(
         const deltaMat = new cv.Mat();
         // Here is the function for originalImage - AdjustedImage
         cv.subtract(imageAdjusted16Bit, originalImage16Bit, deltaMat);
+
+        // logImage(originalImage, "Original Image", value);
+        // logImage(deltaMat, "Hasil delta", value);
         
         return deltaMat;
     } catch (err) {

@@ -62,6 +62,8 @@ async function cleanAndExecuteAdjustment(
     // Prepare empty matrix for converter to 8 bit
     const finalMatConverted = new cv.Mat();
 
+    logImage(originalImage, 'Ori', newValue);
+
     // Convert finalMat to 8 bit
     finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
 
