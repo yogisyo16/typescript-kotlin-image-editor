@@ -68,8 +68,8 @@ export class HonchoEditorClass implements HonchoEditor {
   }
 
   // Function for first adjustment image
-  async adjust(type: AdjustType, score: number): Promise<void> {
-      // AdjustType Checking
+  async adjust(type: AdjustType, score: number): Promise<void> {  
+    // AdjustType Checking
     if (type == AdjustType.Exposure) {
 
       // Applying adjustment, that taking from adjustment type
@@ -163,8 +163,7 @@ export class HonchoEditorClass implements HonchoEditor {
     this.listener?.onImageRendered(this.currentImageEdit);
     this.listener?.onConfigChange(this.config);
 
-    logImage(this.currentImageEdit, "currentImageEdit", 0);
-    logImageWH(this.inputImage, "oriImage");
+    logImage(this.currentImageEdit, type.toString(), score);
     // To save config
     this.configHistotrypush();
   }

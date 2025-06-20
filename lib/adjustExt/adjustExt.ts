@@ -1,5 +1,6 @@
 import cv from "@techstark/opencv-js";
 import {computeDelta} from "@/lib/adjustExt/deltaLogic";
+import { logImage } from "../utills/logImageAdjustment";
 
 // cleanAndExecuteAdjustment to remove the delta from currentImageEdit
 // and apply with new value delta
@@ -63,6 +64,7 @@ async function cleanAndExecuteAdjustment(
 
     // Convert finalMat to 8 bit
     finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
+
     
     return finalMatConverted;
 }
