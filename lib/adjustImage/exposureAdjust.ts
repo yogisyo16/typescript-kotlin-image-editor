@@ -96,20 +96,13 @@ async function modifyImageExposure(src: cv.Mat, score: number): Promise<cv.Mat> 
       // Optional: Log the image (if your logImage utility is defined)
       // logImage(finalHSV, 'Exposure Adjusted Image', score);
 
-      logImage(finalHSV, 'Exposure Adjusted Image', score);
+      logImage(finalHSV, 'Exposure Value', score);
 
       return finalHSV; // Return the final adjusted image
   } catch (error) {
       console.error("Error modifying image exposure:", error);
       // In case of error, return the original source or an empty Mat
       return src; // Or new cv.Mat(); if you prefer an empty result
-  } finally {
-      // // Clean up all intermediate Mat objects to prevent memory leaks
-      // cleanUp.forEach((mat) => {
-      //     if (mat && mat.delete) { // Check if it's a valid Mat and has delete method
-      //         mat.delete();
-      //     }
-      // });
   }
 }
 
