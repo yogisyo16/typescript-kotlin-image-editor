@@ -58,17 +58,7 @@ async function cleanAndExecuteAdjustment(
 
     // Add cleanUpCurrentDelta and result16Bit put it under finalMat
     cv.add(cleanUpCurrentDelta, result16Bit, finalMat);
-    
-    // Prepare empty matrix for converter to 8 bit
-    const finalMatConverted = new cv.Mat();
 
-    logImage(originalImage, 'Ori', newValue);
-
-    // Convert finalMat to 8 bit
-    finalMat.convertTo(finalMatConverted, cv.CV_8UC3);
-
-    
-    
     return finalMat;
 }
 

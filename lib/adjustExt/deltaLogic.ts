@@ -7,17 +7,14 @@ export async function applyAllAdjustments(
     originalImage: cv.Mat,
     configScore: Config,
 ): Promise<cv.Mat> {
-    const cleanup: cv.Mat[] = [];
     try {
         // Create a 16-bit version of the original image to serve as our base.
         const newOriginalMat = new cv.Mat();
         const convert16Bit = originalImage.channels() === 4 ? cv.CV_16SC4 : cv.CV_16SC3;
         originalImage.convertTo(newOriginalMat, convert16Bit);
-        cleanup.push(newOriginalMat);
 
         // Create a 16-bit accumulator, initialized to all zeros, to store the sum of all changes.
         const totalDelta = cv.Mat.zeros(originalImage.rows, originalImage.cols, convert16Bit);
-        cleanup.push(totalDelta);
 
         // Define the pipeline based on the incoming configScore object.
         const adjustmentPipeline = [
@@ -61,11 +58,6 @@ export async function applyAllAdjustments(
     } catch (err) {
         console.error("An error occurred during the adjustment pipeline:", err);
         return originalImage.clone();
-    } finally {
-        // 7. Clean up all created Mats to prevent memory leaks.
-        cleanup.forEach(mat => {
-            if (mat && !mat.isDeleted()) mat.delete();
-        });
     }
 }
 
@@ -74,7 +66,6 @@ export async function computeDelta(
     value: number,
     action: (image: cv.Mat, value: number) => Promise<cv.Mat>,
 ): Promise<cv.Mat> {
-    const cleanup: cv.Mat[] = [];
     try {
         // Create 16-bit versions of the original
         const originalImage16Bit = new cv.Mat();
@@ -98,9 +89,5 @@ export async function computeDelta(
     } catch (err) {
         console.error("Failed inside computeDelta:", (err as Error).message);
         return new cv.Mat();
-    } finally {
-        cleanup.forEach(mat => {
-            if (mat && !mat.isDeleted()) mat.delete();
-        });
     }
 }
